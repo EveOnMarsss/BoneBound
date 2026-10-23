@@ -59,4 +59,4 @@ inline void AssertValidLocalPosition(int x, int y)
 #define SAFE_LOCAL_POS(var) \
     (ASSERT_LOCAL_MAP_ACCESS(), var)
 
-#endif
+#endif

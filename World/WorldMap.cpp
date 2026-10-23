@@ -1,441 +1,308 @@
 #include "WorldMap.h"
 #include "LocalMap.h"
+#include "WorldGen.h"
+#include "Tiles.h"
+#include "../Render/Tileset.h"
 #include "../Entities/NPC.h"
 #include "../Entities/SpawnPoint.h"
 #include "../Game/Camera.h"
 #include <time.h>
 
-// Add this helper function at the top of WorldMap.cpp
-Color SafeGetTileColor(int x, int y)
-{
-    // Bounds checking
-    if (x < 0 || x >= currentMapWidth || y < 0 || y >= currentMapHeight) {
-        printf("WARNING: SafeGetTileColor called with invalid coordinates (%d,%d)\n", x, y);
-        return RAYWHITE; // Return a safe default color
-    }
-    return GetTileColor(worldMap[y][x].worldTile);
-}
-const char* VILLAGE_NAMES[] = {
-    "Oakhaven", "Riverwood", "Stonebridge", "Millbrook", "Fairvale",
-    "Greenfield", "Wolfden", "Eastwick", "Westburton", "Northgate",
-    "Southmere", "Dustmill", "Fernwood", "Maplecroft", "Willowcreek",
-    "Ashford", "Briarwood", "Cresthill", "Dalebrook", "Elmshire"
-};
+// ============================================================================
+// APPEARANCE OF WORLD TILES
+// ============================================================================
 
-const char* CASTLE_NAMES[] = {
-    "Dragonspire", "Stormhold", "Ironkeep", "Winterfell", "Highgarden",
-    "Blackrock", "Shadowfort", "Ravencrest", "Eagle's Nest", "Wolf's Crag",
-    "Dreadfort", "Casterly Rock", "Riverrun", "Pyke", "Sunspear"
-};
-
-const char* CAVE_NAMES[] = {
-    "Gloomdeep", "Echochasm", "Darkmaw", "Crystal Cavern", "Shadowmere",
-    "Whispering Grotto", "Stalactite Cave", "Fungal Depths", "Goblin Warrens",
-    "Troll's Den", "Bat Cave", "Lost Passage", "Deepholm", "Obsidian Cave"
-};
-
-const char* TOWER_NAMES[] = {
-    "Starweaver's Spire", "Archmage's Tower", "Celestial Observatory",
-    "Wizard's End", "Sorcerer's Stone", "Enchanter's Rise", "Mystic Spire",
-    "Arcanum Tower", "Spellweaver's Keep", "Magus Hold", "Crystal Spire"
-};
-
-const char* DUNGEON_NAMES[] = {
-    "Torture Pits", "Soulprison", "Agony's End", "Barrow Deep",
-    "Crypt of Sorrow", "Despair Depths", "Eternal Labyrinth",
-    "Forsaken Dungeon", "Griefhold", "Horror's Gate", "Infernal Keep"
-};
-
-const char* RUINS_NAMES[] = {
-    "Fallen Kingdom", "Lost City", "Ancient Remains", "Crumbled Spire",
-    "Deserted Village", "Echoing Ruins", "Forgotten Citadel",
-    "Ghostly Remains", "Haunted Grounds", "Ivory Debris"
-};
-
-const char* FORT_NAMES[] = {
-    "Stoneguard", "Ironwall", "Steelkeep", "Battleford", "Warrenhold",
-    "Defender's Rest", "Garrison Point", "Hammerfall", "Outpost Omega",
-    "Shieldwall", "Vanguard", "Watchtower", "Bulwark"
-};
-
-const char* GetRandomLocationName(LocationType type)
-{
-    int index;
-    switch (type) {
-        case LOCATION_VILLAGE:
-            index = rand() % (sizeof(VILLAGE_NAMES) / sizeof(VILLAGE_NAMES[0]));
-            return VILLAGE_NAMES[index];
-        case LOCATION_CASTLE:
-            index = rand() % (sizeof(CASTLE_NAMES) / sizeof(CASTLE_NAMES[0]));
-            return CASTLE_NAMES[index];
-        case LOCATION_CAVE:
-            index = rand() % (sizeof(CAVE_NAMES) / sizeof(CAVE_NAMES[0]));
-            return CAVE_NAMES[index];
-        case LOCATION_WIZARD_TOWER:
-            index = rand() % (sizeof(TOWER_NAMES) / sizeof(TOWER_NAMES[0]));
-            return TOWER_NAMES[index];
-        case LOCATION_DUNGEON:
-            index = rand() % (sizeof(DUNGEON_NAMES) / sizeof(DUNGEON_NAMES[0]));
-            return DUNGEON_NAMES[index];
-        case LOCATION_RUINS:
-            index = rand() % (sizeof(RUINS_NAMES) / sizeof(RUINS_NAMES[0]));
-            return RUINS_NAMES[index];
-        case LOCATION_FORT:
-            index = rand() % (sizeof(FORT_NAMES) / sizeof(FORT_NAMES[0]));
-            return FORT_NAMES[index];
-        default:
-            return "Unknown";
-    }
-}
-
-char GetLocationChar(LocationType type)
+int LocationGlyph(LocationType type)
 {
     switch (type) {
-        case LOCATION_VILLAGE: return 'V';
-        case LOCATION_CASTLE: return 'C';
-        case LOCATION_CAVE: return 'c';
-        case LOCATION_WIZARD_TOWER: return 'W';
-        case LOCATION_DUNGEON: return 'D';
-        case LOCATION_RUINS: return 'R';
-        case LOCATION_FORT: return 'F';
-        case LOCATION_TEMPLE: return 'T';
-        case LOCATION_NONE: return '?';  // Add this
-        default: 
-            printf("WARNING: Unknown location type %d\n", type);
-            return '?';
+        case LOCATION_VILLAGE:      return 127;   // ⌂
+        case LOCATION_CASTLE:       return 206;   // ╬
+        case LOCATION_CAVE:         return 239;   // ∩
+        case LOCATION_WIZARD_TOWER: return 4;     // ♦
+        case LOCATION_DUNGEON:      return 234;   // Ω
+        case LOCATION_RUINS:        return 227;   // π
+        case LOCATION_FORT:         return 203;   // ╦
+        case LOCATION_TEMPLE:       return 15;    // ☼
+        default:                    return '?';
     }
 }
 
-Color GetLocationColor(LocationType type, Color baseColor)
+Color LocationColor(LocationType type)
 {
     switch (type) {
-        case LOCATION_VILLAGE: return (Color){ 100, 255, 100, 255 };
-        case LOCATION_CASTLE: return (Color){ 200, 200, 255, 255 };
-        case LOCATION_CAVE: return (Color){ 139, 69, 19, 255 };
-        case LOCATION_WIZARD_TOWER: return (Color){ 200, 100, 255, 255 };
-        case LOCATION_DUNGEON: return (Color){ 150, 0, 0, 255 };
-        case LOCATION_RUINS: return (Color){ 169, 169, 169, 255 };
-        case LOCATION_FORT: return (Color){ 128, 128, 128, 255 };
-        case LOCATION_TEMPLE: return (Color){ 255, 215, 0, 255 };
-        case LOCATION_NONE: return baseColor;  // Add this
-        default: 
-            printf("WARNING: Unknown location type %d in GetLocationColor\n", type);
-            return baseColor;
+        case LOCATION_VILLAGE:      return (Color){ 255, 240, 140, 255 };
+        case LOCATION_CASTLE:       return (Color){ 215, 215, 255, 255 };
+        case LOCATION_CAVE:         return (Color){ 210, 140,  80, 255 };
+        case LOCATION_WIZARD_TOWER: return (Color){ 220, 120, 255, 255 };
+        case LOCATION_DUNGEON:      return (Color){ 230,  50,  50, 255 };
+        case LOCATION_RUINS:        return (Color){ 190, 190, 190, 255 };
+        case LOCATION_FORT:         return (Color){ 160, 160, 170, 255 };
+        case LOCATION_TEMPLE:       return (Color){ 255, 215,   0, 255 };
+        default:                    return WHITE;
     }
 }
 
-LocationType DetermineLocationType(char terrain, int x, int y, int width, int height)
+static void BiomeLook(BiomeType b, int* glyph, Color* fg)
 {
-    if (x == 0 || x == width - 1 || y == 0 || y == height - 1)
-        return LOCATION_NONE;
-    
-    int randVal = rand() % 100;
-    
-    switch (terrain) {
-        case '.': // Grasslands
-            if (randVal < 30) return LOCATION_VILLAGE;
-            else if (randVal < 40) return LOCATION_FORT;
-            else if (randVal < 45) return LOCATION_RUINS;
-            else if (randVal < 48) return LOCATION_CASTLE;
-            else return LOCATION_NONE;
-            
-        case 'T': // Forest
-            if (randVal < 20) return LOCATION_VILLAGE;
-            else if (randVal < 30) return LOCATION_RUINS;
-            else if (randVal < 35) return LOCATION_CAVE;
-            else if (randVal < 38) return LOCATION_WIZARD_TOWER;
-            else return LOCATION_NONE;
-            
-        case '^': // Mountains
-            if (randVal < 25) return LOCATION_CAVE;
-            else if (randVal < 35) return LOCATION_DUNGEON;
-            else if (randVal < 40) return LOCATION_RUINS;
-            else if (randVal < 43) return LOCATION_CASTLE;
-            else if (randVal < 45) return LOCATION_FORT;
-            else return LOCATION_NONE;
-            
-        case '~': // Water
-            if (randVal < 5) return LOCATION_RUINS;
-            else if (randVal < 7) return LOCATION_CAVE;
-            else return LOCATION_NONE;
-            
-        default:
-            return LOCATION_NONE;
+    switch (b) {
+        case BIOME_DEEP_OCEAN: *glyph = 247; *fg = (Color){  35,  60, 150, 255 }; break;
+        case BIOME_OCEAN:      *glyph = 247; *fg = (Color){  60, 110, 200, 255 }; break;
+        case BIOME_LAKE:       *glyph = 247; *fg = (Color){  90, 150, 235, 255 }; break;
+        case BIOME_BEACH:      *glyph = 250; *fg = (Color){ 235, 225, 150, 255 }; break;
+        case BIOME_DESERT:     *glyph = 176; *fg = (Color){ 225, 190, 105, 255 }; break;
+        case BIOME_SAVANNA:    *glyph = 34;  *fg = (Color){ 195, 175,  75, 255 }; break;
+        case BIOME_GRASSLAND:  *glyph = 34;  *fg = (Color){ 105, 185,  65, 255 }; break;
+        case BIOME_FOREST:     *glyph = 6;   *fg = (Color){  50, 140,  50, 255 }; break;
+        case BIOME_JUNGLE:     *glyph = 5;   *fg = (Color){  25, 165,  60, 255 }; break;
+        case BIOME_SWAMP:      *glyph = 126; *fg = (Color){ 100, 125,  60, 255 }; break;
+        case BIOME_TAIGA:      *glyph = 24;  *fg = (Color){  70, 130, 105, 255 }; break;
+        case BIOME_TUNDRA:     *glyph = 249; *fg = (Color){ 160, 180, 185, 255 }; break;
+        case BIOME_GLACIER:    *glyph = 177; *fg = (Color){ 225, 240, 255, 255 }; break;
+        case BIOME_HILLS:      *glyph = 110; *fg = (Color){ 165, 140,  90, 255 }; break;
+        case BIOME_MOUNTAINS:  *glyph = 30;  *fg = (Color){ 150, 140, 130, 255 }; break;
+        case BIOME_SNOW_PEAKS: *glyph = 30;  *fg = (Color){ 250, 250, 255, 255 }; break;
+        default:               *glyph = '?'; *fg = WHITE; break;
     }
 }
+
+// Line glyph for a river through this tile, from its direction mask
+static int RiverGlyph(unsigned char m)
+{
+    auto has = [&](int d) { return (m & (1 << d)) != 0; };
+    bool N = has(0), NE = has(1), E = has(2), SE = has(3), S = has(4), SW = has(5), W = has(6), NW = has(7);
+    int bits = N + NE + E + SE + S + SW + W + NW;
+    if (bits >= 3) return 197;                           // ┼ junction
+    if (N && S) return 179;
+    if (E && W) return 196;
+    if (NE && SW) return 47;
+    if (NW && SE) return 92;
+    if (N && E) return 192;
+    if (N && W) return 217;
+    if (S && E) return 218;
+    if (S && W) return 191;
+    if (N || S) return 179;
+    if (E || W) return 196;
+    if (NE || SW) return 47;
+    if (NW || SE) return 92;
+    return 247;
+}
+
+static inline Color Scale(Color c, float f)
+{
+    int r = (int)(c.r * f), g = (int)(c.g * f), b = (int)(c.b * f);
+    return (Color){ (unsigned char)(r > 255 ? 255 : r), (unsigned char)(g > 255 ? 255 : g), (unsigned char)(b > 255 ? 255 : b), c.a };
+}
+
+void WorldTileLook(const WorldTile* t, int* glyph, Color* fg, Color* bg)
+{
+    BiomeLook(t->biome, glyph, fg);
+    bool water = (t->biome == BIOME_DEEP_OCEAN || t->biome == BIOME_OCEAN || t->biome == BIOME_LAKE);
+
+    if (water) {
+        *bg = Scale(*fg, 0.22f);
+    } else {
+        // gentle relief shading from elevation
+        float shade = 0.80f + 0.55f * (t->elevation - SEA_LEVEL);
+        if (shade < 0.75f) shade = 0.75f;
+        if (shade > 1.15f) shade = 1.15f;
+        *fg = Scale(*fg, shade);
+        *bg = Scale(*fg, 0.14f);
+        if (t->riverMask && !t->isLake) { *glyph = RiverGlyph(t->riverMask); *fg = (Color){ 90, 160, 255, 255 }; }
+        else if (t->roadMask)           { *glyph = 250; *fg = (Color){ 205, 155, 85, 255 }; }
+    }
+    if (t->locationType != LOCATION_NONE) {
+        *glyph = LocationGlyph(t->locationType);
+        *fg = LocationColor(t->locationType);
+    }
+    if (!t->discovered && !previewWholeMap) { *fg = Scale(*fg, 0.55f); *bg = Scale(*bg, 0.55f); }
+}
+
+bool WorldTileEnterable(int x, int y)
+{
+    if (!worldMap || x < 0 || y < 0 || x >= currentMapWidth || y >= currentMapHeight) return false;
+    BiomeType b = worldMap[y][x].biome;
+    return b != BIOME_DEEP_OCEAN && b != BIOME_OCEAN && b != BIOME_LAKE;     // you can't walk across open water
+}
+
+void RevealAround(int cx, int cy, int radius)
+{
+    if (!worldMap) return;
+    for (int y = cy - radius; y <= cy + radius; y++)
+        for (int x = cx - radius; x <= cx + radius; x++)
+            if (x >= 0 && y >= 0 && x < currentMapWidth && y < currentMapHeight &&
+                (x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius + 1)
+                worldMap[y][x].discovered = true;
+}
+
+// ============================================================================
+// DRAWING
+// ============================================================================
 
 void DrawWorldMap()
 {
-    if (worldMap == NULL) {
-        printf("Error: worldMap is NULL in DrawWorldMap\n");
-        return;
-    }
-    
-    // Validate player position
+    if (worldMap == NULL) return;
+
     if (player.worldPos.y < 0 || player.worldPos.y >= currentMapHeight ||
         player.worldPos.x < 0 || player.worldPos.x >= currentMapWidth) {
-        printf("CRASH PREVENTION: Invalid world position (%d,%d) in DrawWorldMap\n", 
-               player.worldPos.x, player.worldPos.y);
-        player.worldPos.x = 2;
-        player.worldPos.y = 2;
+        LOG("CRASH PREVENTION: Invalid world position (%d,%d) in DrawWorldMap\n", player.worldPos.x, player.worldPos.y);
+        player.worldPos.x = currentMapWidth / 2;
+        player.worldPos.y = currentMapHeight / 2;
         return;
     }
-    
+
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
-    
     float visibleWidth = screenWidth / gameCamera.camera.zoom;
     float visibleHeight = screenHeight / gameCamera.camera.zoom;
-    
-    Vector2 cameraWorldTopLeft = {
+
+    Vector2 topLeft = {
         gameCamera.camera.target.x - visibleWidth / 2.0f,
         gameCamera.camera.target.y - visibleHeight / 2.0f
     };
-    
-    DrawRectangle(cameraWorldTopLeft.x, cameraWorldTopLeft.y, 
-                  visibleWidth, visibleHeight, BLACK);
-    
-    int startX = (int)(cameraWorldTopLeft.x / TILE_SIZE) - 1;
-    int startY = (int)(cameraWorldTopLeft.y / TILE_SIZE) - 1;
-    int endX = (int)((cameraWorldTopLeft.x + visibleWidth) / TILE_SIZE) + 2;
-    int endY = (int)((cameraWorldTopLeft.y + visibleHeight) / TILE_SIZE) + 2;
-    
-    startX = (startX < 0) ? 0 : startX;
-    startY = (startY < 0) ? 0 : startY;
-    endX = (endX > currentMapWidth) ? currentMapWidth : endX;
-    endY = (endY > currentMapHeight) ? currentMapHeight : endY;
-    
-    for(int y = startY; y < endY; y++)
-    {
-        for(int x = startX; x < endX; x++)
-        {
-            // CRITICAL: Check array bounds
-            if (y < 0 || y >= currentMapHeight || x < 0 || x >= currentMapWidth) {
-                continue;
-            }
-            
-            WorldTile* tile = &worldMap[y][x];
-            
-            // SAFETY: Check if tile pointer is valid
-            if (tile == NULL) {
-                printf("ERROR: NULL tile at (%d,%d)\n", x, y);
-                continue;
-            }
-            
-            char displayChar;
-            Color color = GetTileColor(tile->worldTile);
-            
-            // Check if this is a location - but ONLY if tile is valid
-            if (tile->locationType != LOCATION_NONE) {
-                displayChar = GetLocationChar(tile->locationType);
-                color = GetLocationColor(tile->locationType, color);
+    DrawRectangle((int)topLeft.x - 1, (int)topLeft.y - 1, (int)visibleWidth + 2, (int)visibleHeight + 2, BLACK);
+
+    int startX = (int)(topLeft.x / TILE_SIZE) - 1;
+    int startY = (int)(topLeft.y / TILE_SIZE) - 1;
+    int endX = (int)((topLeft.x + visibleWidth) / TILE_SIZE) + 2;
+    int endY = (int)((topLeft.y + visibleHeight) / TILE_SIZE) + 2;
+    if (startX < 0) startX = 0;
+    if (startY < 0) startY = 0;
+    if (endX > currentMapWidth)  endX = currentMapWidth;
+    if (endY > currentMapHeight) endY = currentMapHeight;
+
+    // zoomed far out the glyphs turn to mush: draw plain colour blocks instead (a proper "atlas" view)
+    const bool coarse = (TILE_SIZE * gameCamera.camera.zoom) < 9.0f;
+
+    for (int y = startY; y < endY; y++) {
+        for (int x = startX; x < endX; x++) {
+            const WorldTile* t = &worldMap[y][x];
+            int glyph; Color fg, bg;
+            WorldTileLook(t, &glyph, &fg, &bg);
+            if (coarse) {
+                Color fill = bg.a ? Scale(fg, 0.75f) : fg;
+                if (t->biome == BIOME_DEEP_OCEAN || t->biome == BIOME_OCEAN || t->biome == BIOME_LAKE) fill = Scale(fg, 0.8f);
+                if (t->riverMask && !t->isLake && t->biome > BIOME_LAKE) fill = (Color){ 80, 150, 255, 255 };
+                if (t->locationType != LOCATION_NONE) fill = LocationColor(t->locationType);
+                if (!t->discovered && !previewWholeMap) fill = Scale(fill, 0.6f);
+                DrawRectangle(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, fill);
             } else {
-                displayChar = tile->worldTile;
+                DrawGlyphCell(glyph, x, y, fg, bg);
             }
-            
-            // SAFETY: Check discovered flag exists (it should, but just in case)
-            if (!tile->discovered) {
-                color.r = color.r / 2;
-                color.g = color.g / 2;
-                color.b = color.b / 2;
-            }
-            
-            Vector2 pos = { 
-                (float)(x * TILE_SIZE + 8), 
-                (float)(y * TILE_SIZE + 6) 
-            };
-            
-            int fontSize = (currentMapWidth <= 8 && currentMapHeight <= 8) ? 28 : 24;
-            
-            DrawTextEx(
-                GetFontDefault(),
-                TextFormat("%c", displayChar),
-                pos,
-                fontSize,
-                1,
-                color);
         }
     }
+}
+
+// ============================================================================
+// GENERATION
+// ============================================================================
+
+static void AllocateWorld(int width, int height)
+{
+    CleanupAllMaps();
+    currentMapWidth = width;
+    currentMapHeight = height;
+    worldMap = (WorldTile**)calloc(height, sizeof(WorldTile*));
+    for (int y = 0; y < height; y++) worldMap[y] = (WorldTile*)calloc(width, sizeof(WorldTile));   // calloc: no uninitialised fields
+}
+
+void FinalizeNewWorld(int startX, int startY)
+{
+    previewWholeMap = false;
+    player.worldPos.x = startX;
+    player.worldPos.y = startY;
+    player.isInLocalMap = false;
+    player.localPos.x = LOCAL_MAP_WIDTH / 2;
+    player.localPos.y = LOCAL_MAP_HEIGHT / 2;
+    if (player.maxHealth <= 0) {        // brand new character: starting stats
+        player.maxHealth = 20;
+        player.currentHealth = 20;
+        player.level = 1;
+        player.xp = 0;
+        player.gold = 5;
+    }
+    RevealAround(startX, startY, 2);
+    LOG("World ready: %dx%d seed %u, start (%d,%d) '%s'\n", currentMapWidth, currentMapHeight, worldSeed,
+        startX, startY, worldMap[startY][startX].locationName);
+    SafeInitCamera(true);
+}
+
+void BeginWorldGeneration(int width, int height, unsigned int seed)
+{
+    worldSeed = seed;
+    AllocateWorld(width, height);
+    WorldGen_StartAsync(width, height, seed, worldMap);
+}
+
+static int g_recX = 0, g_recY = 0;
+
+void GetRecommendedStart(int* x, int* y) { if (x) *x = g_recX; if (y) *y = g_recY; }
+
+// The generator suggests a good start (a friendly village near water); the player may pick any land tile instead.
+void BeginStartSelection(int recommendedX, int recommendedY)
+{
+    g_recX = recommendedX; g_recY = recommendedY;
+    previewWholeMap = true;                 // let the player see the entire world while choosing
+    player.worldPos.x = recommendedX;       // the cursor IS player.worldPos, so camera/draw code just works
+    player.worldPos.y = recommendedY;
+    player.isInLocalMap = false;
+    SafeInitCamera(true);
+    gameCamera.zoom = FitWorldZoom();       // start zoomed out to the whole map
+    gameCamera.camera.zoom = gameCamera.zoom;
+}
+
+bool UpdateWorldGeneration()
+{
+    if (!WorldGen_IsDone()) return false;
+    WorldGen_Join();
+    int sx, sy;
+    WorldGen_GetStart(&sx, &sy);
+    BeginStartSelection(sx, sy);
+    return true;
 }
 
 void GenerateWorldMap(int width, int height)
 {
-    printf("Generating world map %dx%d\n", width, height);
-    
-    CleanupAllMaps();
-    
-    currentMapWidth = width;
-    currentMapHeight = height;
-    
-    worldMap = (WorldTile**)malloc(height * sizeof(WorldTile*));
-    if (!worldMap) {
-        printf("ERROR: Failed to allocate worldMap rows\n");
-        return;
-    }
-    
-    for (int y = 0; y < height; y++) {
-        worldMap[y] = (WorldTile*)malloc(width * sizeof(WorldTile));
-        if (!worldMap[y]) {
-            printf("ERROR: Failed to allocate worldMap row %d\n", y);
-            return;
-        }
-        
-        for (int x = 0; x < width; x++) {
-            // Initialize ALL fields
-            worldMap[y][x].worldTile = '#';
-            worldMap[y][x].localMap = NULL;
-            worldMap[y][x].hasLocalMap = false;
-            worldMap[y][x].locationType = LOCATION_NONE;
-            worldMap[y][x].locationName[0] = '\0';
-            worldMap[y][x].discovered = false;
-            worldMap[y][x].lastExitX = LOCAL_MAP_WIDTH / 2;
-            worldMap[y][x].lastExitY = LOCAL_MAP_HEIGHT / 2;
-            worldMap[y][x].hasExitPoint = false;
-            
-            if (!(x == 0 || x == width - 1 || y == 0 || y == height - 1)) {
-                float randVal = (float)rand() / RAND_MAX;
-                
-                if (randVal < 0.40) {
-                    worldMap[y][x].worldTile = '.';
-                } else if (randVal < 0.65) {
-                    worldMap[y][x].worldTile = 'T';
-                } else if (randVal < 0.85) {
-                    worldMap[y][x].worldTile = '^';
-                } else {
-                    worldMap[y][x].worldTile = '~';
-                }
-                
-                worldMap[y][x].hasLocalMap = true;
-                worldMap[y][x].locationType = DetermineLocationType(
-                    worldMap[y][x].worldTile, x, y, width, height);
-                
-                if (worldMap[y][x].locationType != LOCATION_NONE) {
-                    strcpy(worldMap[y][x].locationName, 
-                           GetRandomLocationName(worldMap[y][x].locationType));
-                } else {
-                    switch (worldMap[y][x].worldTile) {
-                        case '.': strcpy(worldMap[y][x].locationName, "Grasslands"); break;
-                        case 'T': strcpy(worldMap[y][x].locationName, "Forest"); break;
-                        case '^': strcpy(worldMap[y][x].locationName, "Mountains"); break;
-                        case '~': strcpy(worldMap[y][x].locationName, "Lake"); break;
-                    }
-                }
-            }
-        }
-    }
-    
-    // Set starting village
-    if (height > 2 && width > 2) {
-        worldMap[2][2].worldTile = '.';
-        worldMap[2][2].locationType = LOCATION_VILLAGE;
-        worldMap[2][2].hasLocalMap = true;
-        strcpy(worldMap[2][2].locationName, "Starting Village");
-        worldMap[2][2].discovered = true;
-        worldMap[2][2].hasExitPoint = false;
-    }
-    
-    // Clear area around start
-    for (int y = 1; y <= 3 && y < height; y++) {
-        for (int x = 1; x <= 3 && x < width; x++) {
-            worldMap[y][x].worldTile = '.';
-        }
-    }
-    
-    // CRITICAL: Set player state BEFORE camera init
-    player.worldPos.x = 2;
-    player.worldPos.y = 2;
-    player.isInLocalMap = false;  // Make sure this is false
-    
-    printf("World map generated successfully\n");
-    printf("Starting tile at (2,2): type=%c, hasLocalMap=%d, locationType=%d\n",
-           worldMap[2][2].worldTile,
-           worldMap[2][2].hasLocalMap,
-           worldMap[2][2].locationType);
-    
-    // Use SafeInitCamera
-    SafeInitCamera(true);
-}
-
-void ValidateWorldMap()
-{
-    if (!worldMap) {
-        printf("ERROR: worldMap is NULL in validation\n");
-        return;
-    }
-    
-    printf("Validating world map %dx%d...\n", currentMapWidth, currentMapHeight);
-    int errors = 0;
-    
-    for (int y = 0; y < currentMapHeight; y++) {
-        if (!worldMap[y]) {
-            printf("ERROR: worldMap[%d] is NULL\n", y);
-            errors++;
-            continue;
-        }
-        
-        for (int x = 0; x < currentMapWidth; x++) {
-            WorldTile* tile = &worldMap[y][x];
-            
-            // Basic validation
-            if (tile->worldTile == '\0') {
-                printf("ERROR: Tile (%d,%d) has null worldTile\n", x, y);
-                errors++;
-            }
-            
-            // Check location name if it's a location
-            if (tile->locationType != LOCATION_NONE && tile->locationName[0] == '\0') {
-                printf("ERROR: Location tile (%d,%d) has no name\n", x, y);
-                errors++;
-            }
-        }
-    }
-    
-    if (errors == 0) {
-        printf("World map validation passed!\n");
-    } else {
-        printf("World map validation found %d errors\n", errors);
-    }
+    AllocateWorld(width, height);
+    int sx = 0, sy = 0;
+    WorldGen_Generate(width, height, worldSeed, worldMap, &sx, &sy);
+    FinalizeNewWorld(sx, sy);
 }
 
 void CleanupAllMaps()
 {
+    WorldGen_Join();       // never free the world while the generator thread is still writing to it
     if (!worldMap) return;
-    
+
     for (int y = 0; y < currentMapHeight; y++) {
         for (int x = 0; x < currentMapWidth; x++) {
-            if (worldMap[y][x].localMap) {
-                LocalMap* local = worldMap[y][x].localMap;
-                
-                if (local->spawnPoints) {
-                    for (int i = 0; i < local->spawnPointCount; i++)
-                        free(local->spawnPoints[i]);
-                    free(local->spawnPoints);
-                }
-                
-                if (local->buildings) {
-                    for (int i = 0; i < local->buildingCount; i++) {
-                        Building* b = local->buildings[i];
-                        for (int j = 0; j < b->height; j++)
-                            free(b->layout[j]);
-                        free(b->layout);
-                        free(b);
-                    }
-                    free(local->buildings);
-                }
-                
-                for (int ly = 0; ly < local->height; ly++)
-                    free(local->tiles[ly]);
-                free(local->tiles);
-                free(local);
+            LocalMap* local = worldMap[y][x].localMap;
+            if (!local) continue;
+
+            if (local->spawnPoints) {
+                for (int i = 0; i < local->spawnPointCount; i++) free(local->spawnPoints[i]);
+                free(local->spawnPoints);
             }
+            if (local->buildings) {
+                for (int i = 0; i < local->buildingCount; i++) {
+                    Building* b = local->buildings[i];
+                    if (!b) continue;
+                    for (int j = 0; j < b->height; j++) free(b->layout[j]);
+                    free(b->layout);
+                    free(b);
+                }
+                free(local->buildings);
+            }
+            for (int ly = 0; ly < local->height; ly++) free(local->tiles[ly]);
+            free(local->tiles);
+            free(local->biome);
+            free(local);
         }
         free(worldMap[y]);
     }
     free(worldMap);
     worldMap = NULL;
-    
-    for (int i = 0; i < npcCount; i++)
-        free(npcs[i]);
+
+    for (int i = 0; i < npcCount; i++) free(npcs[i]);
     free(npcs);
     npcs = NULL;
     npcCount = 0;

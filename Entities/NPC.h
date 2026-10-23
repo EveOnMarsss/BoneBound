@@ -10,10 +10,11 @@ extern const int FIRST_NAME_COUNT;
 extern const int LAST_NAME_COUNT;
 
 NPC* CreateNPCFromSpawn(SpawnPoint* spawn, int worldX, int worldY);
+NPC* GetNPCAt(int worldX, int worldY, int localX, int localY);   // living NPC standing on that cell, or NULL
 void UpdateNPCs();
 void DrawNPCs();
 void InteractWithNPC();
 void NPCTakeDamage(NPC* npc, int damage);
 void GenerateNPCName(char* buffer, int bufferSize, bool isUnique);
 
-#endif
+#endif

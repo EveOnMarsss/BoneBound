@@ -1,4 +1,8 @@
 #include "LocalMap.h"
+#include "LocalTerrain.h"
+#include "Tiles.h"
+#include "WorldMap.h"
+#include "../Render/Tileset.h"
 #include "../Entities/SpawnPoint.h"
 #include "../Entities/NPC.h"
 #include "../Game/Camera.h"
@@ -8,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <vector>
 
 // ============================================================================
 // CONSTANTS
@@ -99,30 +104,6 @@ const BuildingSizeRange RUIN_SIZES[] = {
 // COLOR FUNCTIONS
 // ============================================================================
 
-Color GetTileColor(char tile)
-{
-    switch (tile)
-    {
-    case '#': return GRAY;
-    case '.': return (Color){ 100, 255, 100, 255 };
-    case '~': return (Color){ 100, 150, 255, 255 };
-    case '^': return (Color){ 180, 130, 80, 255 };
-    case 'T': return (Color){ 50, 200, 50, 255 };
-    case ',': return (Color){ 139, 69, 19, 255 };
-    case 'B': return BROWN;
-    case 'C': return BEIGE;
-    case 'S': return LIGHTGRAY;
-    case 'A': return DARKGRAY;
-    case 'F': return ORANGE;
-    case 'H': return GOLD;
-    case 'D': return YELLOW;
-    case 'P': return PURPLE;
-    case 'R': return DARKPURPLE;
-    case 'Q': return BROWN;
-    case 'K': return RED;
-    default: return RAYWHITE;
-    }
-}
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -141,7 +122,7 @@ bool IsAreaFree(LocalMap* map, int x, int y, int width, int height)
             int checkY = y + by;
             if (checkX >= 0 && checkX < map->width && checkY >= 0 && checkY < map->height) {
                 char tile = map->tiles[checkY][checkX];
-                if (tile != '.' && tile != 'T' && tile != '^' && tile != '~' && tile != ',') {
+                if (!TileBuildable(tile)) {      // water, rock faces and existing structures block building
                     return false;
                 }
             }
@@ -500,7 +481,6 @@ Building* CreateHouse(int x, int y, int wealthLevel)
     
     // Clamp wealth level
     wealthLevel = (wealthLevel < 0) ? 0 : (wealthLevel > 3) ? 3 : wealthLevel;
-    LOG("    Clamped wealth level: %d\n", wealthLevel);
     
     // Get size range
     int minW = HOUSE_SIZES[wealthLevel].minWidth;
@@ -508,33 +488,8 @@ Building* CreateHouse(int x, int y, int wealthLevel)
     int minH = HOUSE_SIZES[wealthLevel].minHeight;
     int maxH = HOUSE_SIZES[wealthLevel].maxHeight;
     
-    LOG("    Size range: width=%d-%d, height=%d-%d\n", minW, maxW, minH, maxH);
-    
-    // Validate range
-    if (minW <= 0 || maxW <= 0 || minH <= 0 || maxH <= 0) {
-        LOG("    ERROR: Invalid size range\n");
-        return NULL;
-    }
-    
-    if (maxW < minW || maxH < minH) {
-        LOG("    ERROR: Max less than min\n");
-        return NULL;
-    }
-    
-    int widthRange = maxW - minW + 1;
-    int heightRange = maxH - minH + 1;
-    
-    LOG("    widthRange=%d, heightRange=%d\n", widthRange, heightRange);
-    
-    if (widthRange <= 0 || heightRange <= 0) {
-        LOG("    ERROR: Invalid range calculation\n");
-        return NULL;
-    }
-    
-    int width = minW + (rand() % widthRange);
-    int height = minH + (rand() % heightRange);
-    
-    LOG("    Selected size: %dx%d\n", width, height);
+    int width = minW + (rand() % (maxW - minW + 1));
+    int height = minH + (rand() % (maxH - minH + 1));
     
     Building* house = CreateBuilding(BUILDING_HOUSE, x, y, width, height);
     if (!house) {
@@ -542,208 +497,113 @@ Building* CreateHouse(int x, int y, int wealthLevel)
         return NULL;
     }
     
-    LOG("    Adding furniture...\n");
+    LOG("    Adding furniture to house...\n");
     
-    int numBeds = 1, numChairs = 2, numTables = 1, numChests = 1;
-    
-    switch (wealthLevel) {
-        case 0: numBeds = 1; numChairs = 1; numTables = 1; numChests = 0; break;
-        case 1: numBeds = 2; numChairs = 3; numTables = 1; numChests = 1; break;
-        case 2: numBeds = 3; numChairs = 4; numTables = 2; numChests = 2; break;
-        case 3: numBeds = 4; numChairs = 6; numTables = 3; numChests = 3; break;
+    // Clear the interior
+    for (int i = 1; i < height-1; i++) {
+        for (int j = 1; j < width-1; j++) {
+            house->layout[i][j] = '.';
+        }
     }
     
-    LOG("    Furniture counts: beds=%d, chairs=%d, tables=%d, chests=%d\n", 
-        numBeds, numChairs, numTables, numChests);
-    
-    // SAFE BED PLACEMENT
-    LOG("    Placing beds...\n");
-    int bedsPlaced = 0;
-    for (int i = 0; i < numBeds && bedsPlaced < numBeds; i++) {
-        // Calculate bed position - keep away from walls
-        int bedX = 2 + (i * 2);
-        int bedY = 2;
-        
-        // Make sure we're within bounds
-        if (bedX >= width - 2) {
-            bedX = width - 3;
+    // ===== SMALL HOUSE LAYOUT (wealthLevel 0-1) =====
+    if (wealthLevel <= 1) {
+        // Corner 1: Bed in top-left corner
+        if (height > 3 && width > 3) {
+            house->layout[2][2] = 'B'; // Bed in corner
         }
-        if (bedX < 2) bedX = 2;
-        if (bedY >= height - 2) bedY = height - 3;
-        if (bedY < 2) bedY = 2;
         
-        LOG("      Trying bed %d at (%d,%d)\n", i+1, bedX, bedY);
-        
-        // Check if the spot is empty before placing
-        if (bedX >= 0 && bedX < width && bedY >= 0 && bedY < height) {
-            if (house->layout[bedY][bedX] == '.') {
-                AddFurnitureToBuilding(house, FURNITURE_BED, bedX, bedY);
-                bedsPlaced++;
-                LOG("      Bed %d placed at (%d,%d)\n", bedsPlaced, bedX, bedY);
-            } else {
-                LOG("      Spot occupied, skipping\n");
+        // Corner 2: Table in top-right corner
+        if (height > 3 && width > 4) {
+            house->layout[2][width-3] = 'T'; // Table
+            // Chair next to table
+            if (width > 5) {
+                house->layout[2][width-4] = 'C';
             }
-        } else {
-            LOG("      Coordinates out of bounds, skipping\n");
-        }
-    }
-    
-    // SAFE TABLE PLACEMENT
-    LOG("    Placing table...\n");
-    int tableX = width - 4;
-    int tableY = height - 3;
-    
-    // Ensure table is within bounds
-    if (tableX < 2) tableX = 2;
-    if (tableX >= width - 1) tableX = width - 2;
-    if (tableY < 2) tableY = 2;
-    if (tableY >= height - 1) tableY = height - 2;
-    
-    LOG("      Trying table at (%d,%d)\n", tableX, tableY);
-    if (tableX >= 0 && tableX < width && tableY >= 0 && tableY < height) {
-        if (house->layout[tableY][tableX] == '.') {
-            AddFurnitureToBuilding(house, FURNITURE_TABLE, tableX, tableY);
-            LOG("      Table placed at (%d,%d)\n", tableX, tableY);
-        } else {
-            LOG("      Table spot occupied\n");
-        }
-    }
-    
-    // SAFE CHAIR PLACEMENT
-    LOG("    Placing chairs...\n");
-    int chairsPlaced = 0;
-    for (int i = 0; i < numChairs && chairsPlaced < numChairs; i++) {
-        // Place chairs around the table
-        int chairX, chairY;
-        
-        switch (chairsPlaced % 4) {
-            case 0: chairX = tableX - 1; chairY = tableY; break;
-            case 1: chairX = tableX + 1; chairY = tableY; break;
-            case 2: chairX = tableX; chairY = tableY + 1; break;
-            case 3: chairX = tableX; chairY = tableY - 1; break;
-            default: chairX = tableX; chairY = tableY;
         }
         
-        // Bounds check
-        if (chairX < 1) chairX = 1;
-        if (chairX >= width - 1) chairX = width - 2;
-        if (chairY < 1) chairY = 1;
-        if (chairY >= height - 1) chairY = height - 2;
+        // Corner 3: Chest in bottom-left corner
+        if (height > 4 && width > 3) {
+            house->layout[height-3][2] = 'H'; // Chest
+        }
         
-        LOG("      Trying chair %d at (%d,%d)\n", chairsPlaced+1, chairX, chairY);
-        
-        if (chairX >= 0 && chairX < width && chairY >= 0 && chairY < height) {
-            if (house->layout[chairY][chairX] == '.') {
-                AddFurnitureToBuilding(house, FURNITURE_CHAIR, chairX, chairY);
-                chairsPlaced++;
-                LOG("      Chair %d placed at (%d,%d)\n", chairsPlaced, chairX, chairY);
+        // Corner 4: Fireplace or barrel in bottom-right corner
+        if (height > 4 && width > 4) {
+            if (wealthLevel == 1) {
+                house->layout[height-3][width-3] = 'F'; // Fireplace for wealthier
             } else {
-                LOG("      Chair spot occupied\n");
+                house->layout[height-3][width-3] = 'Q'; // Barrel for poor
             }
         }
     }
     
-    // SAFE CHEST PLACEMENT
-    if (numChests > 0) {
-        LOG("    Placing chests...\n");
-        int chestsPlaced = 0;
-        for (int i = 0; i < numChests && chestsPlaced < numChests; i++) {
-            int chestX = width - 3;
-            int chestY = 2 + i;
-            
-            // Bounds check
-            if (chestY >= height - 1) chestY = height - 2;
-            if (chestY < 2) chestY = 2;
-            if (chestX >= width - 1) chestX = width - 2;
-            if (chestX < 2) chestX = 2;
-            
-            LOG("      Trying chest %d at (%d,%d)\n", i+1, chestX, chestY);
-            
-            if (chestX >= 0 && chestX < width && chestY >= 0 && chestY < height) {
-                if (house->layout[chestY][chestX] == '.') {
-                    AddFurnitureToBuilding(house, FURNITURE_CHEST, chestX, chestY);
-                    chestsPlaced++;
-                    LOG("      Chest %d placed at (%d,%d)\n", chestsPlaced, chestX, chestY);
-                } else {
-                    LOG("      Chest spot occupied\n");
+    // ===== MEDIUM HOUSE LAYOUT (wealthLevel 2) =====
+    else if (wealthLevel == 2) {
+        // Bedroom area (top)
+        house->layout[2][2] = 'B'; // Bed 1
+        if (width > 6) {
+            house->layout[2][width-3] = 'B'; // Bed 2
+        }
+        
+        // Chests near beds
+        house->layout[3][2] = 'H'; // Chest near bed 1
+        if (width > 6) {
+            house->layout[3][width-3] = 'H'; // Chest near bed 2
+        }
+        
+        // Living area (bottom)
+        int tableX = width / 2;
+        int tableY = height - 3;
+        house->layout[tableY][tableX] = 'T'; // Table
+        
+        // Chairs around table
+        if (tableX-1 >= 2) house->layout[tableY][tableX-1] = 'C';
+        if (tableX+1 < width-2) house->layout[tableY][tableX+1] = 'C';
+        if (tableY-1 >= 3) house->layout[tableY-1][tableX] = 'C';
+        
+        // Fireplace in corner
+        house->layout[height-3][2] = 'F';
+    }
+    
+    // ===== LARGE HOUSE LAYOUT (wealthLevel 3) =====
+    else {
+        // Bedroom area (top) with multiple beds
+        int bedSpacing = width / 4;
+        for (int i = 0; i < 3; i++) {
+            int bedX = bedSpacing * (i + 1);
+            if (bedX >= 2 && bedX < width-2) {
+                house->layout[2][bedX] = 'B';
+                // Chest next to each bed
+                if (bedX+1 < width-2) {
+                    house->layout[3][bedX] = 'H';
                 }
             }
         }
+        
+        // Living area with table and multiple chairs
+        int tableX = width / 2;
+        int tableY = height - 4;
+        house->layout[tableY][tableX] = 'T';
+        
+        // Multiple chairs around table
+        house->layout[tableY][tableX-1] = 'C';
+        house->layout[tableY][tableX+1] = 'C';
+        house->layout[tableY-1][tableX] = 'C';
+        house->layout[tableY-1][tableX-1] = 'C';
+        house->layout[tableY-1][tableX+1] = 'C';
+        
+        // Kitchen area
+        int kitchenX = width - 3;
+        int kitchenY = height / 2;
+        house->layout[kitchenY][kitchenX] = 'F'; // Fireplace
+        house->layout[kitchenY][kitchenX-1] = 'S'; // Shelf
+        house->layout[kitchenY+1][kitchenX] = 'Q'; // Barrel
+        
+        // Extra storage
+        house->layout[height-3][2] = 'Q'; // Barrel in corner
+        house->layout[2][width-2] = 'H'; // Chest in corner
     }
     
-    // SAFE FIREPLACE PLACEMENT (for wealthier houses)
-    if (wealthLevel >= 2) {
-        LOG("    Placing fireplace...\n");
-        int fireX = 2;
-        int fireY = height - 3;
-        
-        // Bounds check
-        if (fireX < 2) fireX = 2;
-        if (fireX >= width - 1) fireX = width - 2;
-        if (fireY < 2) fireY = 2;
-        if (fireY >= height - 1) fireY = height - 2;
-        
-        LOG("      Trying fireplace at (%d,%d)\n", fireX, fireY);
-        
-        if (fireX >= 0 && fireX < width && fireY >= 0 && fireY < height) {
-            if (house->layout[fireY][fireX] == '.') {
-                AddFurnitureToBuilding(house, FURNITURE_FIREPLACE, fireX, fireY);
-                LOG("      Fireplace placed at (%d,%d)\n", fireX, fireY);
-            } else {
-                LOG("      Fireplace spot occupied\n");
-            }
-        }
-    }
-    
-    // SAFE BARREL/CRATE PLACEMENT - FIXED TO PREVENT DIVISION BY ZERO
-    LOG("    Placing barrels/crates...\n");
-    int decorationsPlaced = 0;
-    int maxDecorations = wealthLevel + 2;
-    
-    // SAFETY: Check if building is large enough for decorations
-    if (width <= 4 || height <= 4) {
-        LOG("    WARNING: Building too small for decorations (size %dx%d), skipping\n", width, height);
-    } else {
-        // Calculate safe ranges with minimum of 1 to prevent division by zero
-        int widthRange = width - 4;
-        int heightRange = height - 4;
-        
-        LOG("    widthRange=%d, heightRange=%d\n", widthRange, heightRange);
-        
-        // Ensure ranges are at least 1 to avoid division by zero
-        if (widthRange < 1) widthRange = 1;
-        if (heightRange < 1) heightRange = 1;
-        
-        for (int i = 0; i < maxDecorations * 3 && decorationsPlaced < maxDecorations; i++) {
-            // Generate random positions within safe bounds
-            int fx = 2 + (rand() % widthRange);
-            int fy = 3 + (rand() % heightRange);
-            
-            // Double-check bounds
-            if (fx >= width - 1) fx = width - 2;
-            if (fy >= height - 1) fy = height - 2;
-            if (fx < 1) fx = 1;
-            if (fy < 1) fy = 1;
-            
-            LOG("      Trying decoration at (%d,%d)\n", fx, fy);
-            
-            // Validate coordinates before accessing array
-            if (fx >= 0 && fx < width && fy >= 0 && fy < height) {
-                if (house->layout[fy][fx] == '.') {
-                    FurnitureType decor = (rand() % 2 == 0) ? FURNITURE_BARREL : FURNITURE_CRATE;
-                    AddFurnitureToBuilding(house, decor, fx, fy);
-                    decorationsPlaced++;
-                    LOG("      Decoration %d placed at (%d,%d)\n", decorationsPlaced, fx, fy);
-                } else {
-                    LOG("      Spot occupied with '%c'\n", house->layout[fy][fx]);
-                }
-            } else {
-                LOG("      Coordinates out of bounds: (%d,%d) for size %dx%d\n", fx, fy, width, height);
-            }
-        }
-    }
-    
-    LOG("    Placed %d decorations\n", decorationsPlaced);
     LOG("    House created successfully\n");
     return house;
 }
@@ -753,22 +613,14 @@ Building* CreateShop(int x, int y, int shopLevel)
     LOG("    CreateShop: x=%d, y=%d, shopLevel=%d\n", x, y, shopLevel);
     
     shopLevel = (shopLevel < 0) ? 0 : (shopLevel > 2) ? 2 : shopLevel;
-    LOG("    Clamped shop level: %d\n", shopLevel);
     
     int minW = SHOP_SIZES[shopLevel].minWidth;
     int maxW = SHOP_SIZES[shopLevel].maxWidth;
     int minH = SHOP_SIZES[shopLevel].minHeight;
     int maxH = SHOP_SIZES[shopLevel].maxHeight;
     
-    LOG("    Size range: width=%d-%d, height=%d-%d\n", minW, maxW, minH, maxH);
-    
-    int widthRange = maxW - minW + 1;
-    int heightRange = maxH - minH + 1;
-    
-    int width = minW + (rand() % widthRange);
-    int height = minH + (rand() % heightRange);
-    
-    LOG("    Selected size: %dx%d\n", width, height);
+    int width = minW + (rand() % (maxW - minW + 1));
+    int height = minH + (rand() % (maxH - minH + 1));
     
     Building* shop = CreateBuilding(BUILDING_SHOP, x, y, width, height);
     if (!shop) {
@@ -778,57 +630,89 @@ Building* CreateShop(int x, int y, int shopLevel)
     
     LOG("    Adding shop features...\n");
     
-    // Counter (Shelf) along the back
-    int counterY = height - 3;
-    if (counterY >= 0 && counterY < height) {
-        for (int i = 2; i < width-2; i++) {
-            if (i >= 0 && i < width) {
-                shop->layout[counterY][i] = 'S';
-            }
-        }
-        LOG("    Placed counter at row %d\n", counterY);
-    }
-    
-    // Side shelves
-    for (int i = 2; i < height-3; i++) {
-        if (i != counterY) {
-            if (i >= 0 && i < height) {
-                if (2 >= 0 && 2 < width) shop->layout[i][2] = 'S';
-                if (width-3 >= 0 && width-3 < width) shop->layout[i][width-3] = 'S';
-            }
+    // Clear interior
+    for (int i = 1; i < height-1; i++) {
+        for (int j = 1; j < width-1; j++) {
+            shop->layout[i][j] = '.';
         }
     }
     
-    // Goods (Q)
-    int numGoods = 4 + (shopLevel * 4);
-    LOG("    Placing %d goods\n", numGoods);
+    // ===== COUNTER =====
+    // Place counter along one wall (right side)
+    int counterX = width - 3;
+    for (int yPos = 2; yPos < height-2; yPos++) {
+        shop->layout[yPos][counterX] = 'S'; // Shelf/counter
+    }
     
-    int goodsPlaced = 0;
-    for (int i = 0; i < numGoods * 3 && goodsPlaced < numGoods; i++) {
-        int rangeX = width - 6;
-        int rangeY = height - 5;
+    // ===== MERCHANT'S CHAIR =====
+    // Chair behind counter
+    int chairY = height / 2;
+    shop->layout[chairY][counterX-1] = 'C';
+    
+    // ===== TABLE =====
+    // Table in the middle or left side
+    int tableX = 3;
+    int tableY = height / 2;
+    shop->layout[tableY][tableX] = 'T';
+    
+    // ===== SHELVES ALONG WALLS =====
+    // Shelves on left wall
+    for (int yPos = 2; yPos < height-2; yPos += 2) {
+        shop->layout[yPos][2] = 'S';
+    }
+    
+    // Shelves on back wall
+    for (int xPos = 2; xPos < width-4; xPos += 2) {
+        shop->layout[2][xPos] = 'S';
+    }
+    
+    // ===== GOODS ON SHELVES =====
+    int numGoods = 3 + shopLevel * 2;
+    
+    // Place goods on shelves
+    for (int g = 0; g < numGoods; g++) {
+        int attempts = 0;
+        bool placed = false;
         
-        if (rangeX < 1) rangeX = 1;
-        if (rangeY < 1) rangeY = 1;
-        
-        int gx = 3 + (rand() % rangeX);
-        int gy = 3 + (rand() % rangeY);
-        
-        if (gx >= 0 && gx < width && gy >= 0 && gy < height) {
-            if (shop->layout[gy][gx] == '.') {
-                shop->layout[gy][gx] = 'Q';
-                goodsPlaced++;
+        while (!placed && attempts < 20) {
+            attempts++;
+            
+            int shelfX, shelfY;
+            
+            // Randomly choose a shelf location
+            if (rand() % 3 == 0) {
+                // Left wall shelf
+                shelfX = 2;
+                shelfY = 2 + (rand() % (height - 4));
+            } else if (rand() % 2 == 0) {
+                // Back wall shelf
+                shelfX = 2 + (rand() % (width - 5));
+                shelfY = 2;
+            } else {
+                // Counter shelf
+                shelfX = counterX;
+                shelfY = 2 + (rand() % (height - 4));
+            }
+            
+            // Check bounds and if it's a shelf
+            if (shelfX >= 0 && shelfX < width && shelfY >= 0 && shelfY < height) {
+                if (shop->layout[shelfY][shelfX] == 'S') {
+                    shop->layout[shelfY][shelfX] = 'Q'; // Turn shelf into goods
+                    placed = true;
+                }
             }
         }
     }
-    LOG("    Placed %d goods\n", goodsPlaced);
     
-    // Counter chair
-    int chairX = width/2;
-    int chairY = counterY + 1;
-    if (chairX >= 0 && chairX < width && chairY >= 0 && chairY < height) {
-        shop->layout[chairY][chairX] = 'C';
-        LOG("    Placed counter chair at (%d,%d)\n", chairX, chairY);
+    // ===== STORAGE IN BACK =====
+    if (height > 5) {
+        int storageY = height - 3;
+        for (int s = 0; s < 2 + shopLevel; s++) {
+            int storageX = 3 + (rand() % (width - 5));
+            if (shop->layout[storageY][storageX] == '.') {
+                shop->layout[storageY][storageX] = 'Q';
+            }
+        }
     }
     
     LOG("    Shop created successfully\n");
@@ -840,22 +724,14 @@ Building* CreateInn(int x, int y, int innLevel)
     LOG("    CreateInn: x=%d, y=%d, innLevel=%d\n", x, y, innLevel);
     
     innLevel = (innLevel < 0) ? 0 : (innLevel > 2) ? 2 : innLevel;
-    LOG("    Clamped inn level: %d\n", innLevel);
     
     int minW = INN_SIZES[innLevel].minWidth;
     int maxW = INN_SIZES[innLevel].maxWidth;
     int minH = INN_SIZES[innLevel].minHeight;
     int maxH = INN_SIZES[innLevel].maxHeight;
     
-    LOG("    Size range: width=%d-%d, height=%d-%d\n", minW, maxW, minH, maxH);
-    
-    int widthRange = maxW - minW + 1;
-    int heightRange = maxH - minH + 1;
-    
-    int width = minW + (rand() % widthRange);
-    int height = minH + (rand() % heightRange);
-    
-    LOG("    Selected size: %dx%d\n", width, height);
+    int width = minW + (rand() % (maxW - minW + 1));
+    int height = minH + (rand() % (maxH - minH + 1));
     
     Building* inn = CreateBuilding(BUILDING_INN, x, y, width, height);
     if (!inn) {
@@ -865,72 +741,64 @@ Building* CreateInn(int x, int y, int innLevel)
     
     LOG("    Adding inn features...\n");
     
-    // Tables and chairs
-    int numTables = 2 + innLevel;
-    LOG("    Placing %d tables\n", numTables);
-    
-    int tablesPlaced = 0;
-    for (int t = 0; t < numTables * 3 && tablesPlaced < numTables; t++) {
-        int txRange = width - 6;
-        int tyRange = height - 8;
-        
-        if (txRange < 1) txRange = 1;
-        if (tyRange < 1) tyRange = 1;
-        
-        int tx = 3 + (rand() % txRange);
-        int ty = 3 + (rand() % tyRange);
-        
-        if (tx >= 0 && tx < width-1 && ty >= 0 && ty < height-2) {
-            // Check if area is free for table and chairs
-            if (inn->layout[ty][tx] == '.' && 
-                inn->layout[ty+1][tx-1] == '.' && 
-                inn->layout[ty+1][tx+1] == '.') {
-                
-                inn->layout[ty][tx] = 'T';
-                inn->layout[ty+1][tx-1] = 'C';
-                inn->layout[ty+1][tx+1] = 'C';
-                tablesPlaced++;
-                LOG("      Table %d placed at (%d,%d)\n", tablesPlaced, tx, ty);
-            }
+    // Clear interior
+    for (int i = 1; i < height-1; i++) {
+        for (int j = 1; j < width-1; j++) {
+            inn->layout[i][j] = '.';
         }
     }
     
-    // Bar
-    if (height-3 >= 0 && height-3 < height) {
-        if (width-4 >= 0 && width-4 < width) inn->layout[height-3][width-4] = 'S';
-        if (width-3 >= 0 && width-3 < width) inn->layout[height-3][width-3] = 'S';
-        if (width-2 >= 0 && width-2 < width) inn->layout[height-3][width-2] = 'S';
-        LOG("    Placed bar\n");
+    // ===== BAR =====
+    // Bar along one wall (top)
+    int barY = 2;
+    for (int xPos = 3; xPos < width-3; xPos++) {
+        inn->layout[barY][xPos] = 'S';
     }
     
-    // Bar storage
-    if (height-2 >= 0 && height-2 < height) {
-        if (width-4 >= 0 && width-4 < width) inn->layout[height-2][width-4] = 'Q';
-        if (width-3 >= 0 && width-3 < width) inn->layout[height-2][width-3] = 'Q';
+    // Bar stools
+    if (barY+1 < height-1) {
+        for (int xPos = 4; xPos < width-4; xPos += 3) {
+            inn->layout[barY+1][xPos] = 'C';
+        }
     }
     
-    // Fireplace
-    if (2 < height && 2 < width) {
-        inn->layout[2][2] = 'F';
-        LOG("    Placed fireplace\n");
-    }
+    // ===== TABLES =====
+    int numTables = 2 + innLevel;
+    int startY = barY + 3;
     
-    // Rooms (beds and chests)
-    int numRooms = 2 + innLevel * 2;
-    LOG("    Placing %d rooms\n", numRooms);
-    
-    int roomsPlaced = 0;
-    for (int r = 0; r < numRooms && roomsPlaced < numRooms; r++) {
-        int rx = 3 + (r % 2) * 6;
-        int ry = height - 7;
+    for (int t = 0; t < numTables; t++) {
+        int tableX = 4 + (t * 5);
+        int tableY = startY;
         
-        if (rx >= 0 && rx < width-1 && ry >= 0 && ry < height-1) {
-            if (inn->layout[ry][rx] == '.' && inn->layout[ry][rx+1] == '.') {
-                inn->layout[ry][rx] = 'B';
-                inn->layout[ry][rx+1] = 'B';
-                if (ry+1 < height) inn->layout[ry+1][rx] = 'H';
-                roomsPlaced++;
-                LOG("      Room %d placed at (%d,%d)\n", roomsPlaced, rx, ry);
+        if (tableX < width-4 && tableY < height-4) {
+            // Table
+            inn->layout[tableY][tableX] = 'T';
+            
+            // Chairs around table
+            if (tableY+1 < height-2) inn->layout[tableY+1][tableX] = 'C';
+            if (tableX-1 >= 3) inn->layout[tableY][tableX-1] = 'C';
+            if (tableX+1 < width-3) inn->layout[tableY][tableX+1] = 'C';
+        }
+    }
+    
+    // ===== FIREPLACE =====
+    // Fireplace in corner
+    inn->layout[height-3][3] = 'F';
+    
+    // ===== ROOMS =====
+    int numRooms = 1 + innLevel;
+    int roomY = height - 4;
+    
+    for (int r = 0; r < numRooms; r++) {
+        int roomX = width - 5 - (r * 4);
+        
+        if (roomX >= 4) {
+            // Bed
+            inn->layout[roomY][roomX] = 'B';
+            
+            // Chest
+            if (roomY+1 < height-2) {
+                inn->layout[roomY+1][roomX] = 'H';
             }
         }
     }
@@ -944,22 +812,14 @@ Building* CreateBlacksmith(int x, int y, int smithLevel)
     LOG("    CreateBlacksmith: x=%d, y=%d, smithLevel=%d\n", x, y, smithLevel);
     
     smithLevel = (smithLevel < 0) ? 0 : (smithLevel > 2) ? 2 : smithLevel;
-    LOG("    Clamped smith level: %d\n", smithLevel);
     
     int minW = BLACKSMITH_SIZES[smithLevel].minWidth;
     int maxW = BLACKSMITH_SIZES[smithLevel].maxWidth;
     int minH = BLACKSMITH_SIZES[smithLevel].minHeight;
     int maxH = BLACKSMITH_SIZES[smithLevel].maxHeight;
     
-    LOG("    Size range: width=%d-%d, height=%d-%d\n", minW, maxW, minH, maxH);
-    
-    int widthRange = maxW - minW + 1;
-    int heightRange = maxH - minH + 1;
-    
-    int width = minW + (rand() % widthRange);
-    int height = minH + (rand() % heightRange);
-    
-    LOG("    Selected size: %dx%d\n", width, height);
+    int width = minW + (rand() % (maxW - minW + 1));
+    int height = minH + (rand() % (maxH - minH + 1));
     
     Building* smithy = CreateBuilding(BUILDING_BLACKSMITH, x, y, width, height);
     if (!smithy) {
@@ -969,57 +829,52 @@ Building* CreateBlacksmith(int x, int y, int smithLevel)
     
     LOG("    Adding blacksmith features...\n");
     
-    // Anvils
-    int numAnvils = 1 + smithLevel;
-    LOG("    Placing %d anvils\n", numAnvils);
-    
-    for (int a = 0; a < numAnvils; a++) {
-        int ax = 3 + a * 3;
-        if (ax >= 0 && ax < width-1 && 3 < height) {
-            if (smithy->layout[3][ax] == '.' && smithy->layout[3][ax+1] == '.') {
-                smithy->layout[3][ax] = 'A';
-                smithy->layout[3][ax+1] = 'A';
-                LOG("      Anvil %d placed at (%d,%d)\n", a+1, ax, 3);
-            }
+    // Clear interior
+    for (int i = 1; i < height-1; i++) {
+        for (int j = 1; j < width-1; j++) {
+            smithy->layout[i][j] = '.';
         }
     }
     
-    // Forge/Fireplace
-    if (3 < height) {
-        if (width-3 >= 0 && width-3 < width) {
-            smithy->layout[3][width-3] = 'F';
-            LOG("    Placed forge at (%d,%d)\n", width-3, 3);
-        }
-        if (width-4 >= 0 && width-4 < width) {
-            smithy->layout[3][width-4] = 'F';
-        }
+    // ===== FORGE =====
+    // Forge in corner
+    smithy->layout[3][width-3] = 'F';
+    
+    // ===== ANVIL =====
+    // Anvil near forge
+    smithy->layout[4][width-4] = 'A';
+    
+    // ===== SHELVES ALONG WALLS =====
+    // Shelves on left wall
+    for (int yPos = 2; yPos < height-2; yPos += 2) {
+        smithy->layout[yPos][2] = 'S';
     }
     
-    // Storage
-    int numStorage = 4 + smithLevel * 3;
-    LOG("    Placing %d storage items\n", numStorage);
+    // Shelves on back wall
+    for (int xPos = 2; xPos < width-4; xPos += 2) {
+        smithy->layout[2][xPos] = 'S';
+    }
     
-    int storagePlaced = 0;
-    for (int s = 0; s < numStorage * 3 && storagePlaced < numStorage; s++) {
-        int rangeX = 2;
-        if (rangeX < 1) rangeX = 1;
+    // ===== STORAGE =====
+    int numStorage = 3 + smithLevel * 2;
+    
+    // Place barrels/crates
+    for (int s = 0; s < numStorage; s++) {
+        int attempts = 0;
+        bool placed = false;
         
-        int sx = width-4 + (rand() % rangeX);
-        int sy = height-4 + (rand() % 2);
-        
-        if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
-            if (smithy->layout[sy][sx] == '.') {
-                smithy->layout[sy][sx] = 'Q';
-                storagePlaced++;
+        while (!placed && attempts < 20) {
+            attempts++;
+            
+            int storageX = 3 + (rand() % (width - 5));
+            int storageY = height - 3 - (rand() % 2);
+            
+            if (storageX >= 2 && storageX < width-2 && storageY >= 2 && storageY < height-2) {
+                if (smithy->layout[storageY][storageX] == '.') {
+                    smithy->layout[storageY][storageX] = 'Q';
+                    placed = true;
+                }
             }
-        }
-    }
-    LOG("    Placed %d storage items\n", storagePlaced);
-    
-    // Shelves on walls
-    for (int i = 2; i < width-2; i += 2) {
-        if (1 < height && i >= 0 && i < width) {
-            smithy->layout[1][i] = 'S';
         }
     }
     
@@ -1032,22 +887,14 @@ Building* CreateGuardPost(int x, int y, int postLevel)
     LOG("    CreateGuardPost: x=%d, y=%d, postLevel=%d\n", x, y, postLevel);
     
     postLevel = (postLevel < 0) ? 0 : (postLevel > 2) ? 2 : postLevel;
-    LOG("    Clamped post level: %d\n", postLevel);
     
     int minW = GUARD_POST_SIZES[postLevel].minWidth;
     int maxW = GUARD_POST_SIZES[postLevel].maxWidth;
     int minH = GUARD_POST_SIZES[postLevel].minHeight;
     int maxH = GUARD_POST_SIZES[postLevel].maxHeight;
     
-    LOG("    Size range: width=%d-%d, height=%d-%d\n", minW, maxW, minH, maxH);
-    
-    int widthRange = maxW - minW + 1;
-    int heightRange = maxH - minH + 1;
-    
-    int width = minW + (rand() % widthRange);
-    int height = minH + (rand() % heightRange);
-    
-    LOG("    Selected size: %dx%d\n", width, height);
+    int width = minW + (rand() % (maxW - minW + 1));
+    int height = minH + (rand() % (maxH - minH + 1));
     
     Building* post = CreateBuilding(BUILDING_GUARD_POST, x, y, width, height);
     if (!post) {
@@ -1057,35 +904,38 @@ Building* CreateGuardPost(int x, int y, int postLevel)
     
     LOG("    Adding guard post features...\n");
     
-    // Bunks
+    // Clear interior
+    for (int i = 1; i < height-1; i++) {
+        for (int j = 1; j < width-1; j++) {
+            post->layout[i][j] = '.';
+        }
+    }
+    
+    // ===== BUNKS =====
     int numBunks = 1 + postLevel;
-    LOG("    Placing %d bunks\n", numBunks);
     
     for (int b = 0; b < numBunks; b++) {
-        int bx = 2 + (b * 2);
-        if (bx >= 0 && bx < width-1 && 2 < height) {
-            if (post->layout[2][bx] == '.' && post->layout[2][bx+1] == '.') {
-                post->layout[2][bx] = 'B';
-                post->layout[2][bx+1] = 'B';
-                LOG("      Bunk %d placed at (%d,%d)\n", b+1, bx, 2);
-            }
+        int bunkX = 3 + (b * 3);
+        if (bunkX < width-3) {
+            post->layout[2][bunkX] = 'B';
         }
     }
     
-    // Table and chairs
-    if (height-2 >= 0 && height-2 < height) {
-        if (width-4 >= 0 && width-4 < width) post->layout[height-2][width-4] = 'T';
-        if (width-3 >= 0 && width-3 < width) post->layout[height-2][width-3] = 'C';
-        if (width-5 >= 0 && width-5 < width) post->layout[height-2][width-5] = 'C';
-        LOG("    Placed table and chairs\n");
-    }
+    // ===== TABLE =====
+    int tableX = width / 2;
+    int tableY = height - 3;
+    post->layout[tableY][tableX] = 'T';
     
-    // Wall shelves
-    for (int i = 0; i < 3; i++) {
-        if (2 < height && width-3 >= 0 && width-3 < width) {
-            post->layout[2][width-3] = 'S';
-        }
-    }
+    // Chairs at table
+    if (tableX-1 >= 2) post->layout[tableY][tableX-1] = 'C';
+    if (tableX+1 < width-2) post->layout[tableY][tableX+1] = 'C';
+    
+    // ===== WEAPON RACKS =====
+    post->layout[height-3][2] = 'S';
+    if (width > 5) post->layout[height-3][width-3] = 'S';
+    
+    // ===== STORAGE =====
+    post->layout[3][width-3] = 'Q';
     
     LOG("    Guard post created successfully\n");
     return post;
@@ -1464,50 +1314,6 @@ Building* CreateRuin(int x, int y, int ruinLevel)
 // TERRAIN GENERATION
 // ============================================================================
 
-void GenerateBaseTerrain(LocalMap* map, char worldTileType)
-{
-    LOG("  Generating base terrain for type '%c'...\n", worldTileType);
-    
-    for (int y = 0; y < map->height; y++) {
-        for (int x = 0; x < map->width; x++) {
-            if (x == 0 || x == map->width - 1 || y == 0 || y == map->height - 1) {
-                map->tiles[y][x] = '#';
-            } else {
-                float randVal = (float)rand() / RAND_MAX;
-                
-                switch (worldTileType) {
-                    case '.':  // Grassland
-                        if (randVal < 0.7) map->tiles[y][x] = '.';
-                        else if (randVal < 0.85) map->tiles[y][x] = 'T';
-                        else map->tiles[y][x] = '.';
-                        break;
-                        
-                    case 'T':  // Forest
-                        if (randVal < 0.6) map->tiles[y][x] = 'T';
-                        else map->tiles[y][x] = '.';
-                        break;
-                        
-                    case '~':  // Water
-                        if (randVal < 0.9) map->tiles[y][x] = '~';
-                        else map->tiles[y][x] = '.';
-                        break;
-                        
-                    case '^':  // Mountain
-                        if (randVal < 0.8) map->tiles[y][x] = '^';
-                        else map->tiles[y][x] = '.';
-                        break;
-                        
-                    default:
-                        map->tiles[y][x] = '.';
-                }
-            }
-        }
-        map->tiles[y][map->width] = '\0';
-    }
-    
-    LOG("  Base terrain generation complete\n");
-}
-
 // ============================================================================
 // ROAD FUNCTIONS
 // ============================================================================
@@ -1629,7 +1435,7 @@ void CreateTownSquareWithRoads(LocalMap* map, int centerX, int centerY, int size
     for (int y = centerY - half; y <= centerY + half; y++) {
         for (int x = centerX - half; x <= centerX + half; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                map->tiles[y][x] = ',';
+                if (!TileIsWater(map->tiles[y][x])) map->tiles[y][x] = ',';
             }
         }
     }
@@ -1691,7 +1497,11 @@ void GenerateVillageSpawnPoints(LocalMap* map)
             spawn->npcType = NPC_WANDERER;
             spawn->maxCount = 1;
             spawn->isUnique = false;
-            snprintf(spawn->npcName, 50, "Traveler");
+            
+            // FIX: Use actual name from database, not "Traveler"
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            
             spawn->type = SPAWN_TRAVELER;
             spawn->currentCount = 0;
             spawn->respawnTimer = 120;
@@ -1749,69 +1559,76 @@ void GenerateVillageSpawnPoints(LocalMap* map)
                 spawn->x = b->x + b->width / 2;
                 spawn->y = b->y + b->height / 2;
                 
+                // FIX: Set spawn properties WITHOUT hardcoded "Villager" names
                 switch (b->type) {
                     case BUILDING_HOUSE:
                         spawn->npcType = NPC_VILLAGER;
                         spawn->maxCount = 1 + (rand() % 2);
                         spawn->isUnique = (rand() % 10 < 2);
-                        if (spawn->isUnique) {
-                            snprintf(spawn->npcName, 50, "Villager %d", i);
-                        } else {
-                            snprintf(spawn->npcName, 50, "Villager");
-                        }
                         break;
                         
                     case BUILDING_SHOP:
                         spawn->npcType = NPC_MERCHANT;
                         spawn->maxCount = 1;
                         spawn->isUnique = true;
-                        snprintf(spawn->npcName, 50, "Merchant");
                         break;
                         
                     case BUILDING_INN:
                         spawn->npcType = NPC_INN_KEEPER;
                         spawn->maxCount = 2;
                         spawn->isUnique = true;
-                        snprintf(spawn->npcName, 50, "Innkeeper");
                         break;
                         
                     case BUILDING_BLACKSMITH:
                         spawn->npcType = NPC_BLACKSMITH;
                         spawn->maxCount = 1;
                         spawn->isUnique = true;
-                        snprintf(spawn->npcName, 50, "Blacksmith");
                         break;
                         
                     case BUILDING_GUARD_POST:
                         spawn->npcType = NPC_GUARD;
                         spawn->maxCount = 2 + (rand() % 2);
                         spawn->isUnique = false;
-                        snprintf(spawn->npcName, 50, "Guard");
                         break;
                         
                     default:
                         spawn->npcType = NPC_VILLAGER;
                         spawn->maxCount = 1;
                         spawn->isUnique = false;
-                        snprintf(spawn->npcName, 50, "Villager");
                 }
+                
+                // FIX: Generate actual name from database
+                const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+                if (spawn->isUnique) {
+                    const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
+                    snprintf(spawn->npcName, 50, "%s %s", first, last);
+                } else {
+                    snprintf(spawn->npcName, 50, "%s", first);
+                }
+                
             } else {
-                // Building is NULL, place randomly
+                // Building is NULL, place randomly with proper name
                 spawn->x = 50 + (rand() % 150);
                 spawn->y = 50 + (rand() % 150);
                 spawn->npcType = NPC_WANDERER;
                 spawn->maxCount = 1;
                 spawn->isUnique = false;
-                snprintf(spawn->npcName, 50, "Traveler");
+                
+                // Generate proper name
+                const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+                snprintf(spawn->npcName, 50, "%s", first);
             }
         } else {
-            // No buildings (shouldn't get here due to earlier check, but just in case)
+            // No buildings, place randomly with proper name
             spawn->x = 50 + (rand() % 150);
             spawn->y = 50 + (rand() % 150);
             spawn->npcType = NPC_WANDERER;
             spawn->maxCount = 1;
             spawn->isUnique = false;
-            snprintf(spawn->npcName, 50, "Traveler");
+            
+            // Generate proper name
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
         }
         
         spawn->type = SPAWN_HOUSE;
@@ -1821,10 +1638,13 @@ void GenerateVillageSpawnPoints(LocalMap* map)
         
         map->spawnPoints[spawnedCount] = spawn;
         spawnedCount++;
+        
+        LOG("  Created spawn point %d: %s at (%d,%d) type=%d\n", 
+            spawnedCount, spawn->npcName, spawn->x, spawn->y, spawn->npcType);
     }
     
     map->spawnPointCount = spawnedCount;
-    LOG("  Generated %d spawn points\n", map->spawnPointCount);
+    LOG("  Generated %d spawn points with proper names\n", map->spawnPointCount);
 }
 
 void GenerateCastleSpawnPoints(LocalMap* map)
@@ -2401,7 +2221,7 @@ void PlaceVillage(LocalMap* map)
     for (int y = centerY - half; y <= centerY + half; y++) {
         for (int x = centerX - half; x <= centerX + half; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                map->tiles[y][x] = ','; // Dirt path for town square
+                if (!TileIsWater(map->tiles[y][x])) map->tiles[y][x] = ','; // Dirt path for town square
             }
         }
     }
@@ -2834,7 +2654,7 @@ void PlaceCastle(LocalMap* map)
     for (int y = centerY - 50; y <= centerY + 50; y++) {
         for (int x = centerX - 50; x <= centerX + 50; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                map->tiles[y][x] = '.';
+                ClearTileKeepWater(map, x, y);
             }
         }
     }
@@ -2908,11 +2728,9 @@ void PlaceCave(LocalMap* map)
     for (int y = centerY - 60; y <= centerY + 60; y++) {
         for (int x = centerX - 60; x <= centerX + 60; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                if (rand() % 10 < 7) {
-                    map->tiles[y][x] = '^';
-                } else {
-                    map->tiles[y][x] = '.';
-                }
+                // terrain is already a hilly clearing (LocalTerrain); just scatter a few boulders
+                char& t = map->tiles[y][x];
+                if (rand() % 100 < 7 && TileWalkable(t) && !TileIsWater(t) && t != TILE_ROAD) t = TILE_BOULDER;
             }
         }
     }
@@ -2945,7 +2763,7 @@ void PlaceCave(LocalMap* map)
         }
     }
     
-    LOG("  Cave placed with %d buildings\n", map->buildingCount);
+    LOG("Cave placed with %d buildings\n", map->buildingCount);
 }
 
 void PlaceTower(LocalMap* map)
@@ -2960,7 +2778,7 @@ void PlaceTower(LocalMap* map)
     for (int y = centerY - 40; y <= centerY + 40; y++) {
         for (int x = centerX - 40; x <= centerX + 40; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                map->tiles[y][x] = '.';
+                ClearTileKeepWater(map, x, y);
             }
         }
     }
@@ -3008,11 +2826,8 @@ void PlaceDungeon(LocalMap* map)
     for (int y = centerY - 50; y <= centerY + 50; y++) {
         for (int x = centerX - 50; x <= centerX + 50; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                if (rand() % 10 < 6) {
-                    map->tiles[y][x] = '^';
-                } else {
-                    map->tiles[y][x] = '.';
-                }
+                char& t = map->tiles[y][x];
+                if (rand() % 100 < 6 && TileWalkable(t) && !TileIsWater(t) && t != TILE_ROAD) t = TILE_BOULDER;
             }
         }
     }
@@ -3060,11 +2875,10 @@ void PlaceRuins(LocalMap* map)
     for (int y = centerY - 60; y <= centerY + 60; y++) {
         for (int x = centerX - 60; x <= centerX + 60; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                if (rand() % 10 < 4) {
-                    map->tiles[y][x] = 'T';
-                } else {
-                    map->tiles[y][x] = '.';
-                }
+                char& t = map->tiles[y][x];
+                int r = rand() % 100;
+                if (r < 6 && t == TILE_GRASS) t = TILE_TREE;                 // overgrown ruins
+                else if (r < 30 && t == TILE_GRASS) t = TILE_TALLGRASS;
             }
         }
     }
@@ -3102,7 +2916,7 @@ void PlaceFort(LocalMap* map)
     for (int y = centerY - 50; y <= centerY + 50; y++) {
         for (int x = centerX - 50; x <= centerX + 50; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                map->tiles[y][x] = '.';
+                ClearTileKeepWater(map, x, y);
             }
         }
     }
@@ -3170,7 +2984,7 @@ void PlaceTemple(LocalMap* map)
     for (int y = centerY - 40; y <= centerY + 40; y++) {
         for (int x = centerX - 40; x <= centerX + 40; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                map->tiles[y][x] = '.';
+                ClearTileKeepWater(map, x, y);
             }
         }
     }
@@ -3209,9 +3023,7 @@ void PlaceTemple(LocalMap* map)
     for (int y = gardenY - 5; y <= gardenY + 5; y++) {
         for (int x = gardenX - 5; x <= gardenX + 5; x++) {
             if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-                if (rand() % 3 == 0) {
-                    map->tiles[y][x] = 'T';
-                }
+                if (rand() % 3 == 0 && TileWalkable(map->tiles[y][x]) && !TileIsWater(map->tiles[y][x])) map->tiles[y][x] = TILE_FLOWERS;
             }
         }
     }
@@ -3389,23 +3201,15 @@ void DrawLocalMap()
     if (endX > local->width) endX = local->width;
     if (endY > local->height) endY = local->height;
     
-    for(int y = startY; y < endY; y++)
+    const int wx = player.worldPos.x, wy = player.worldPos.y;
+    for (int y = startY; y < endY; y++)
     {
-        for(int x = startX; x < endX; x++)
+        for (int x = startX; x < endX; x++)
         {
-            if (y < 0 || y >= local->height || x < 0 || x >= local->width) {
-                continue;
-            }
-            
             char tile = local->tiles[y][x];
-            Color tile_color = GetTileColor(tile);
-            
-            Vector2 pos = { 
-                (float)(x * TILE_SIZE + 8), 
-                (float)(y * TILE_SIZE + 6) 
-            };
-            
-            DrawTextEx(GetFontDefault(), TextFormat("%c", tile), pos, 24, 1, tile_color);
+            int biome = local->biome ? local->biome[y * local->width + x] : BIOME_GRASSLAND;
+            unsigned int h = HashCell(x + wx * LOCAL_MAP_WIDTH, y + wy * LOCAL_MAP_HEIGHT, 1337u);   // stable per cell, continuous across tiles
+            DrawGlyphCell(TileGlyph(tile, h), x, y, TileColor(tile, biome, h), TileBackground(tile, biome, h));
         }
     }
 }
@@ -3430,6 +3234,7 @@ void GenerateLocalMap(int worldX, int worldY)
     local->height = LOCAL_MAP_HEIGHT;
     local->buildings = NULL;
     local->buildingCount = 0;
+    local->biome = (unsigned char*)calloc((size_t)local->width * local->height, 1);
     local->spawnPoints = NULL;
     local->spawnPointCount = 0;
     
@@ -3453,7 +3258,11 @@ void GenerateLocalMap(int worldX, int worldY)
     
     LOG("Map size: %dx%d\n", local->width, local->height);
     
-    GenerateBaseTerrain(local, tile->worldTile);
+    // Everything below is deterministic per (world seed, tile): the same tile always regenerates identically
+    unsigned int localSeed = HashCell(worldX, worldY, worldSeed);
+    srand(localSeed);
+
+    GenerateLocalTerrain(local, worldX, worldY);
     
     if (tile->locationType != LOCATION_NONE) {
         PlaceStructuresForLocation(local, tile->locationType);
@@ -3467,7 +3276,73 @@ void GenerateLocalMap(int worldX, int worldY)
     }
 
     tile->localMap = local;
+    srand((unsigned int)time(NULL) ^ (unsigned int)clock() ^ (localSeed * 2654435761u));   // back to unpredictable randomness
     LOG("=== LOCAL MAP GENERATION COMPLETE ===\n\n");
+}
+
+// Finds the nearest walkable, unoccupied cell to (x,y) that belongs to a reasonably large connected area.
+static bool FindWalkableSpot(LocalMap* map, int worldX, int worldY, int* ox, int* oy)
+{
+    const int W = map->width, H = map->height;
+    std::vector<char> rejected((size_t)W * H, 0);
+    std::vector<int> queue, seen((size_t)W * H, 0);
+    int stamp = 0;
+    for (int r = 0; r < 128; r++) {
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (r > 0 && abs(dx) != r && abs(dy) != r) continue;       // ring only
+                int x = *ox + dx, y = *oy + dy;
+                if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue;
+                if (rejected[y * W + x] || !IsTileWalkable(map->tiles[y][x])) continue;
+                if (GetNPCAt(worldX, worldY, x, y)) continue;
+                // is this part of a big enough walkable area? (flood fill, capped)
+                stamp++;
+                queue.clear(); queue.push_back(y * W + x); seen[y * W + x] = stamp;
+                for (size_t qi = 0; qi < queue.size() && queue.size() < 400; qi++) {
+                    int c = queue[qi], cx = c % W, cy = c / W;
+                    static const int DX[4] = { 1, -1, 0, 0 }, DY[4] = { 0, 0, 1, -1 };
+                    for (int d = 0; d < 4; d++) {
+                        int nx = cx + DX[d], ny = cy + DY[d];
+                        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+                        int ni = ny * W + nx;
+                        if (seen[ni] == stamp || !IsTileWalkable(map->tiles[ny][nx])) continue;
+                        seen[ni] = stamp; queue.push_back(ni);
+                    }
+                }
+                if (queue.size() >= 400) { *ox = x; *oy = y; return true; }
+                for (int c : queue) rejected[c] = 1;
+            }
+        }
+    }
+    return false;
+}
+
+// Walk off the edge of the current local map into the neighbouring world tile - the world is seamless.
+bool TravelToAdjacentTile(int dx, int dy)
+{
+    int nwx = player.worldPos.x + dx, nwy = player.worldPos.y + dy;
+    if (nwx < 0 || nwy < 0 || nwx >= currentMapWidth || nwy >= currentMapHeight) return false;
+    WorldTile* dest = &worldMap[nwy][nwx];
+    if (!dest->hasLocalMap) return false;
+    if (!dest->localMap) GenerateLocalMap(nwx, nwy);
+    if (!dest->localMap) return false;
+
+    int nx = player.localPos.x, ny = player.localPos.y;
+    if (dx > 0) nx = 0; else if (dx < 0) nx = dest->localMap->width - 1;
+    if (dy > 0) ny = 0; else if (dy < 0) ny = dest->localMap->height - 1;
+
+    if (!IsTileWalkable(dest->localMap->tiles[ny][nx])) return false;       // a tree or deep water in the way, like anywhere else
+    if (GetNPCAt(nwx, nwy, nx, ny)) return false;
+
+    RemoveNPCsFromMap(player.worldPos.x, player.worldPos.y);
+    player.worldPos.x = nwx;
+    player.worldPos.y = nwy;
+    player.localPos.x = nx;
+    player.localPos.y = ny;
+    RevealAround(nwx, nwy, 1);
+    SpawnNPCsForMap(dest->localMap, nwx, nwy);
+    SafeInitCamera(false);          // snap the camera, don't glide across a whole map
+    return true;
 }
 
 void EnterLocalMap(int worldX, int worldY)
@@ -3544,6 +3419,10 @@ void EnterLocalMap(int worldX, int worldY)
     if (player.localPos.x >= LOCAL_MAP_WIDTH - 1) player.localPos.x = LOCAL_MAP_WIDTH - 2;
     if (player.localPos.y >= LOCAL_MAP_HEIGHT - 1) player.localPos.y = LOCAL_MAP_HEIGHT - 2;
     
+    {   // never start inside a wall, a fountain or a sealed pocket
+        int sx = player.localPos.x, sy = player.localPos.y;
+        if (FindWalkableSpot(tile->localMap, worldX, worldY, &sx, &sy)) { player.localPos.x = sx; player.localPos.y = sy; }
+    }
     LOG("Final position after clamping: (%d,%d)\n", player.localPos.x, player.localPos.y);
     
     player.isInLocalMap = true;
@@ -3585,6 +3464,11 @@ void RemoveNPCsFromMap(int worldX, int worldY)
         }
     }
     
+    if (worldX >= 0 && worldY >= 0 && worldX < currentMapWidth && worldY < currentMapHeight && worldMap[worldY][worldX].localMap) {
+        LocalMap* lm = worldMap[worldY][worldX].localMap;
+        for (int i = 0; i < lm->spawnPointCount; i++) if (lm->spawnPoints[i]) lm->spawnPoints[i]->currentCount = 0;
+    }
+
     if (removed == 0) return;
     
     int newCount = 0;
@@ -3594,4 +3478,4 @@ void RemoveNPCsFromMap(int worldX, int worldY)
         }
     }
     npcCount = newCount;
-}
+}

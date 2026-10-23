@@ -15,4 +15,4 @@ void SpawnNPCsFromPoints(LocalMap* map, int worldX, int worldY);
 void UpdateSpawnPoints();
 void NPCDied(NPC* npc);
 
-#endif
+#endif

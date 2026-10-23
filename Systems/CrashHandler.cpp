@@ -475,4 +475,4 @@ void CheckMemoryUsage()
             printf("Memory usage: %zu MB\n", memoryMB);
         }
     }
-}
+}

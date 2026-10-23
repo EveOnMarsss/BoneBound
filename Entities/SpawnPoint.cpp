@@ -1,9 +1,10 @@
 #include "SpawnPoint.h"
+#include "../World/Tiles.h"
 #include "NPC.h"
 #include "../World/LocalMap.h"
 #include <time.h>
 
-// ===== VILLAGE SPAWN POINTS (100 NPCs total) =====
+// ===== VILLAGE SPAWN POINTS =====
 void CreateTownSpawnPoints(LocalMap* map)
 {
     printf("CreateTownSpawnPoints: Starting for village\n");
@@ -26,7 +27,7 @@ void CreateTownSpawnPoints(LocalMap* map)
     
     int spawnedCount = 0;
     int attempts = 0;
-    int maxAttempts = targetCount * 20; // Prevent infinite loop
+    int maxAttempts = targetCount * 20;
     
     while (spawnedCount < targetCount && attempts < maxAttempts) {
         attempts++;
@@ -41,10 +42,10 @@ void CreateTownSpawnPoints(LocalMap* map)
         int x = safeMargin + (rand() % (maxX - safeMargin));
         int y = safeMargin + (rand() % (maxY - safeMargin));
         
-        // Check if this spot is on a walkable tile (not a wall)
+        // Check if this spot is on a walkable tile
         bool foundSpot = false;
         if (x >= 0 && x < map->width && y >= 0 && y < map->height) {
-            if (map->tiles[y][x] == '.' || map->tiles[y][x] == 'T' || map->tiles[y][x] == ',') {
+            if (IsTileWalkable(map->tiles[y][x]) && !TileIsWater(map->tiles[y][x])) {   // dry, walkable ground only
                 foundSpot = true;
             }
         }
@@ -54,13 +55,13 @@ void CreateTownSpawnPoints(LocalMap* map)
             continue;
         }
         
-        // Check if we already have a spawn point too close to this one
+        // Check if too close to another spawn point
         bool tooClose = false;
         for (int i = 0; i < spawnedCount; i++) {
             if (map->spawnPoints[i]) {
                 int dx = abs(map->spawnPoints[i]->x - x);
                 int dy = abs(map->spawnPoints[i]->y - y);
-                if (dx < 10 && dy < 10) { // Minimum distance between spawn points
+                if (dx < 10 && dy < 10) {
                     tooClose = true;
                     break;
                 }
@@ -75,18 +76,33 @@ void CreateTownSpawnPoints(LocalMap* map)
         // Set spawn properties
         spawn->x = x;
         spawn->y = y;
-        spawn->type = SPAWN_HOUSE;
-        spawn->npcType = NPC_VILLAGER;
+        
+        // Randomly assign NPC type for variety
+        int typeRoll = rand() % 100;
+        if (typeRoll < 60) { // 60% Villagers
+            spawn->type = SPAWN_HOUSE;
+            spawn->npcType = NPC_VILLAGER;
+        } else if (typeRoll < 80) { // 20% Guards
+            spawn->type = SPAWN_GUARD_POST;
+            spawn->npcType = NPC_GUARD;
+        } else if (typeRoll < 90) { // 10% Merchants
+            spawn->type = SPAWN_SHOP;
+            spawn->npcType = NPC_MERCHANT;
+        } else { // 10% Innkeepers
+            spawn->type = SPAWN_INN;
+            spawn->npcType = NPC_INN_KEEPER;
+        }
+        
         spawn->isUnique = (rand() % 10 < 2); // 20% unique
         spawn->maxCount = 1 + (rand() % 2); // 1-2 NPCs per spawn
         
-        // Generate name
+        // Generate a REAL name - ALWAYS use the name database, NEVER "Villager"
+        const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
         if (spawn->isUnique) {
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
             const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
             snprintf(spawn->npcName, 50, "%s %s", first, last);
         } else {
-            snprintf(spawn->npcName, 50, "Villager");
+            snprintf(spawn->npcName, 50, "%s", first);
         }
         
         spawn->currentCount = 0;
@@ -96,20 +112,18 @@ void CreateTownSpawnPoints(LocalMap* map)
         map->spawnPoints[spawnedCount] = spawn;
         spawnedCount++;
         
-        printf("  Spawn point %d: at (%d,%d), maxCount=%d\n", 
-               spawnedCount, x, y, spawn->maxCount);
+        printf("  Spawn point %d: at (%d,%d), name='%s', type=%d, unique=%d, maxCount=%d\n", 
+               spawnedCount, x, y, spawn->npcName, spawn->npcType, spawn->isUnique, spawn->maxCount);
     }
     
-    // Update the actual count
     map->spawnPointCount = spawnedCount;
-    printf("CreateTownSpawnPoints: Complete, created %d spawn points (target was %d)\n", 
-           spawnedCount, targetCount);
+    printf("CreateTownSpawnPoints: Complete, created %d spawn points\n", spawnedCount);
 }
 
-// ===== CASTLE SPAWN POINTS (100 NPCs total) =====
+// ===== CASTLE SPAWN POINTS =====
 void CreateCastleSpawnPoints(LocalMap* map)
 {
-    map->spawnPointCount = 20; // 20 spawn points = ~100 NPCs
+    map->spawnPointCount = 15 + (rand() % 10); // 15-25 spawn points
     map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
     
     int safeMargin = 30;
@@ -118,50 +132,36 @@ void CreateCastleSpawnPoints(LocalMap* map)
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
         spawn->y = safeMargin + (rand() % (maxY - safeMargin));
         
         int typeRoll = rand() % 100;
-        if (typeRoll < 40) { // 40% Guards (40 NPCs)
+        if (typeRoll < 50) { // 50% Guards
             spawn->type = SPAWN_GUARD_POST;
             spawn->npcType = NPC_GUARD;
-            spawn->isUnique = false;
-            spawn->maxCount = 4 + (rand() % 4); // 4-7 guards per post
-            const char* ranks[] = {"Guard", "Knight", "Soldier", "Sentry", "Watchman", "Archer"};
-            snprintf(spawn->npcName, 50, ranks[rand() % 6]);
-        } else if (typeRoll < 65) { // 25% Servants (25 NPCs)
+        } else if (typeRoll < 75) { // 25% Servants/Villagers
             spawn->type = SPAWN_HOUSE;
             spawn->npcType = NPC_VILLAGER;
-            spawn->isUnique = false;
-            spawn->maxCount = 3 + (rand() % 4); // 3-6 servants
-            const char* servants[] = {"Servant", "Maid", "Butler", "Cook", "Stablehand", "Page"};
-            snprintf(spawn->npcName, 50, servants[rand() % 6]);
-        } else if (typeRoll < 80) { // 15% Nobles (15 NPCs)
-            spawn->type = SPAWN_HOUSE;
-            spawn->npcType = NPC_VILLAGER;
-            spawn->isUnique = true;
-            spawn->maxCount = 2 + (rand() % 2); // 2-3 nobles per family
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            const char* titles[] = {"Lord", "Lady", "Baron", "Baroness", "Duke", "Duchess", "Count", "Countess"};
-            snprintf(spawn->npcName, 50, "%s %s %s", titles[rand() % 8], first, last);
-        } else if (typeRoll < 92) { // 12% Merchants (12 NPCs)
+        } else if (typeRoll < 90) { // 15% Merchants
             spawn->type = SPAWN_SHOP;
             spawn->npcType = NPC_MERCHANT;
-            spawn->isUnique = true;
-            spawn->maxCount = 2 + (rand() % 2); // 2-3 merchants
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "Royal Merchant %s %s", first, last);
-        } else { // 8% Blacksmiths (8 NPCs)
+        } else { // 10% Blacksmiths
             spawn->type = SPAWN_SHOP;
             spawn->npcType = NPC_BLACKSMITH;
-            spawn->isUnique = true;
-            spawn->maxCount = 2 + (rand() % 2); // 2-3 blacksmiths
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+        }
+        
+        spawn->isUnique = (rand() % 10 < 3); // 30% unique in castle
+        spawn->maxCount = 1 + (rand() % 3); // 1-3 NPCs per spawn
+        
+        // Generate name - ALWAYS use the name database
+        const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+        if (spawn->isUnique) {
             const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "Royal Blacksmith %s %s", first, last);
+            snprintf(spawn->npcName, 50, "%s %s", first, last);
+        } else {
+            snprintf(spawn->npcName, 50, "%s", first);
         }
         
         spawn->currentCount = 0;
@@ -169,13 +169,15 @@ void CreateCastleSpawnPoints(LocalMap* map)
         spawn->respawnCounter = 0;
         
         map->spawnPoints[i] = spawn;
+        
+        printf("  Castle spawn %d: name='%s', type=%d\n", i, spawn->npcName, spawn->npcType);
     }
 }
 
-// ===== CAVE SPAWN POINTS (100 NPCs total) =====
+// ===== CAVE SPAWN POINTS =====
 void CreateCaveSpawnPoints(LocalMap* map)
 {
-    map->spawnPointCount = 15; // 15 spawn points averaging 6-7 each = ~100
+    map->spawnPointCount = 10 + (rand() % 10); // 10-20 spawn points
     map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
     
     int safeMargin = 20;
@@ -184,56 +186,47 @@ void CreateCaveSpawnPoints(LocalMap* map)
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
         spawn->y = safeMargin + (rand() % (maxY - safeMargin));
         spawn->type = SPAWN_BANDIT_CAMP;
-        spawn->npcType = NPC_BANDIT;
         
         int creatureRoll = rand() % 100;
-        if (i == 0 && rand() % 3 == 0) { // Boss creature (unique)
-            spawn->isUnique = true;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            
-            if (creatureRoll < 30) {
-                snprintf(spawn->npcName, 50, "Troll %s %s", first, last);
-                spawn->maxCount = 1;
-            } else if (creatureRoll < 60) {
-                snprintf(spawn->npcName, 50, "Ogre %s %s", first, last);
-                spawn->maxCount = 1;
-            } else {
-                snprintf(spawn->npcName, 50, "Cave Monster %s %s", first, last);
-                spawn->maxCount = 1;
-            }
-            spawn->respawnTimer = 0;
+        if (creatureRoll < 40) {
+            spawn->npcType = NPC_BANDIT;
+            snprintf(spawn->npcName, 50, "Goblin");
+            spawn->maxCount = 3 + (rand() % 5);
+        } else if (creatureRoll < 70) {
+            spawn->npcType = NPC_BANDIT;
+            snprintf(spawn->npcName, 50, "Kobold");
+            spawn->maxCount = 4 + (rand() % 6);
         } else {
-            spawn->isUnique = false;
-            
-            if (creatureRoll < 40) {
-                snprintf(spawn->npcName, 50, "Goblin");
-                spawn->maxCount = 5 + (rand() % 8); // 5-12 goblins
-            } else if (creatureRoll < 70) {
-                snprintf(spawn->npcName, 50, "Kobold");
-                spawn->maxCount = 6 + (rand() % 10); // 6-15 kobolds
-            } else {
-                snprintf(spawn->npcName, 50, "Bat");
-                spawn->maxCount = 8 + (rand() % 12); // 8-19 bats
-            }
-            spawn->respawnTimer = 120 + (rand() % 180);
+            spawn->npcType = NPC_BANDIT;
+            snprintf(spawn->npcName, 50, "Bat");
+            spawn->maxCount = 5 + (rand() % 8);
+        }
+        
+        spawn->isUnique = (i == 0 && rand() % 3 == 0); // First spawn might be unique boss
+        if (spawn->isUnique) {
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            char tempName[50];
+            strcpy(tempName, spawn->npcName);
+            snprintf(spawn->npcName, 50, "%s the %s", first, tempName);
         }
         
         spawn->currentCount = 0;
+        spawn->respawnTimer = 120 + (rand() % 180);
         spawn->respawnCounter = 0;
         
         map->spawnPoints[i] = spawn;
     }
 }
 
-// ===== WIZARD TOWER SPAWN POINTS (100 NPCs total) =====
+// ===== WIZARD TOWER SPAWN POINTS =====
 void CreateTowerSpawnPoints(LocalMap* map)
 {
-    map->spawnPointCount = 12; // 12 spawn points = ~100 NPCs
+    map->spawnPointCount = 8 + (rand() % 8); // 8-16 spawn points
     map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
     
     int centerX = map->width / 2;
@@ -241,9 +234,10 @@ void CreateTowerSpawnPoints(LocalMap* map)
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
         
-        spawn->x = centerX - 30 + (rand() % 60);
-        spawn->y = centerY - 30 + (rand() % 60);
+        spawn->x = centerX - 40 + (rand() % 80);
+        spawn->y = centerY - 40 + (rand() % 80);
         spawn->type = SPAWN_HOUSE;
         
         if (i == 0) {
@@ -252,25 +246,24 @@ void CreateTowerSpawnPoints(LocalMap* map)
             spawn->npcType = NPC_WIZARD;
             const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
             const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            
-            const char* titles[] = {"Archmage", "Wizard", "Sorcerer", "Magus", "Enchanter", "Warlock"};
-            snprintf(spawn->npcName, 50, "%s %s %s", titles[rand() % 6], first, last);
+            snprintf(spawn->npcName, 50, "%s %s", first, last);
             spawn->maxCount = 1;
             spawn->respawnTimer = 0;
-        } else if (i < 5) {
+        } else if (i < 4) {
             // Apprentices
             spawn->isUnique = false;
             spawn->npcType = NPC_VILLAGER;
-            snprintf(spawn->npcName, 50, "Apprentice");
-            spawn->maxCount = 4 + (rand() % 4); // 4-7 apprentices
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 2 + (rand() % 3);
             spawn->respawnTimer = 180;
         } else {
             // Magical creatures
             spawn->isUnique = false;
             spawn->npcType = NPC_BANDIT;
-            const char* creatures[] = {"Golem", "Familiar", "Elemental", "Imp", "Homunculus", "Construct"};
-            snprintf(spawn->npcName, 50, creatures[rand() % 6]);
-            spawn->maxCount = 3 + (rand() % 5); // 3-7 creatures
+            const char* creatures[] = {"Golem", "Familiar", "Elemental", "Imp"};
+            snprintf(spawn->npcName, 50, "%s", creatures[rand() % 4]);
+            spawn->maxCount = 2 + (rand() % 4);
             spawn->respawnTimer = 240;
         }
         
@@ -281,10 +274,10 @@ void CreateTowerSpawnPoints(LocalMap* map)
     }
 }
 
-// ===== DUNGEON SPAWN POINTS (100 NPCs total) =====
+// ===== DUNGEON SPAWN POINTS =====
 void CreateDungeonSpawnPoints(LocalMap* map)
 {
-    map->spawnPointCount = 18; // 18 spawn points = ~100 NPCs
+    map->spawnPointCount = 12 + (rand() % 12); // 12-24 spawn points
     map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
     
     int safeMargin = 20;
@@ -293,6 +286,7 @@ void CreateDungeonSpawnPoints(LocalMap* map)
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
         spawn->y = safeMargin + (rand() % (maxY - safeMargin));
@@ -302,16 +296,15 @@ void CreateDungeonSpawnPoints(LocalMap* map)
             spawn->isUnique = true;
             spawn->npcType = NPC_BANDIT;
             const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            const char* titles[] = {"Dungeon Lord", "Torturer", "Prison Master", "Warden", "Overlord"};
-            snprintf(spawn->npcName, 50, "%s %s %s", titles[rand() % 5], first, last);
+            snprintf(spawn->npcName, 50, "%s the Dungeon Lord", first);
             spawn->maxCount = 1;
             spawn->respawnTimer = 0;
         } else if (i < 5) { // Guards
             spawn->isUnique = false;
             spawn->npcType = NPC_GUARD;
-            snprintf(spawn->npcName, 50, "Prison Guard");
-            spawn->maxCount = 4 + (rand() % 4); // 4-7 guards
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 2 + (rand() % 4);
             spawn->respawnTimer = 120;
         } else if (i < 10) { // Undead
             spawn->isUnique = false;
@@ -321,14 +314,15 @@ void CreateDungeonSpawnPoints(LocalMap* map)
             } else {
                 snprintf(spawn->npcName, 50, "Zombie");
             }
-            spawn->maxCount = 4 + (rand() % 6); // 4-9 undead
+            spawn->maxCount = 3 + (rand() % 5);
             spawn->respawnTimer = 180;
         } else { // Prisoners
             spawn->isUnique = false;
             spawn->npcType = NPC_VILLAGER;
-            snprintf(spawn->npcName, 50, "Prisoner");
-            spawn->maxCount = 3 + (rand() % 5); // 3-7 prisoners
-            spawn->respawnTimer = 0; // Prisoners don't respawn
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 2 + (rand() % 3);
+            spawn->respawnTimer = 0;
         }
         
         spawn->currentCount = 0;
@@ -338,10 +332,10 @@ void CreateDungeonSpawnPoints(LocalMap* map)
     }
 }
 
-// ===== RUINS SPAWN POINTS (100 NPCs total) =====
+// ===== RUINS SPAWN POINTS =====
 void CreateRuinsSpawnPoints(LocalMap* map)
 {
-    map->spawnPointCount = 15; // 15 spawn points = ~100 NPCs
+    map->spawnPointCount = 10 + (rand() % 10); // 10-20 spawn points
     map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
     
     int safeMargin = 30;
@@ -350,49 +344,39 @@ void CreateRuinsSpawnPoints(LocalMap* map)
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
         spawn->y = safeMargin + (rand() % (maxY - safeMargin));
         spawn->type = SPAWN_BANDIT_CAMP;
         
         int typeRoll = rand() % 100;
-        if (typeRoll < 50) { // 50% Grave Robbers (50 NPCs)
+        if (typeRoll < 50) { // 50% Grave Robbers
             spawn->npcType = NPC_BANDIT;
-            snprintf(spawn->npcName, 50, "Grave Robber");
-            spawn->isUnique = false;
-            spawn->maxCount = 5 + (rand() % 6); // 5-10 robbers
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 2 + (rand() % 5);
             spawn->respawnTimer = 150;
-        } else if (typeRoll < 75) { // 25% Explorers (25 NPCs)
+        } else if (typeRoll < 75) { // 25% Explorers
             spawn->npcType = NPC_WANDERER;
-            if (rand() % 4 == 0) {
-                spawn->isUnique = true;
-                const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-                const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-                snprintf(spawn->npcName, 50, "Explorer %s %s", first, last);
-                spawn->maxCount = 1;
-                spawn->respawnTimer = 0;
-            } else {
-                spawn->isUnique = false;
-                snprintf(spawn->npcName, 50, "Explorer");
-                spawn->maxCount = 2 + (rand() % 4); // 2-5 explorers
-                spawn->respawnTimer = 200;
-            }
-        } else { // 25% Hermits (25 NPCs)
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 1 + (rand() % 3);
+            spawn->respawnTimer = 200;
+        } else { // 25% Hermits
             spawn->npcType = NPC_VILLAGER;
-            if (rand() % 3 == 0) {
-                spawn->isUnique = true;
-                const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-                const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-                snprintf(spawn->npcName, 50, "Hermit %s %s", first, last);
-                spawn->maxCount = 1;
-                spawn->respawnTimer = 0;
-            } else {
-                spawn->isUnique = false;
-                const char* hermits[] = {"Hermit", "Madman", "Recluse", "Loner", "Outcast"};
-                snprintf(spawn->npcName, 50, hermits[rand() % 5]);
-                spawn->maxCount = 2 + (rand() % 4); // 2-5 hermits
-                spawn->respawnTimer = 250;
-            }
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 1 + (rand() % 2);
+            spawn->respawnTimer = 250;
+        }
+        
+        spawn->isUnique = (rand() % 10 < 2); // 20% unique
+        if (spawn->isUnique) {
+            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
+            char tempName[50];
+            strcpy(tempName, spawn->npcName);
+            snprintf(spawn->npcName, 50, "%s %s", tempName, last);
         }
         
         spawn->currentCount = 0;
@@ -402,10 +386,10 @@ void CreateRuinsSpawnPoints(LocalMap* map)
     }
 }
 
-// ===== FORT SPAWN POINTS (100 NPCs total) =====
+// ===== FORT SPAWN POINTS =====
 void CreateFortSpawnPoints(LocalMap* map)
 {
-    map->spawnPointCount = 18; // 18 spawn points = ~100 NPCs
+    map->spawnPointCount = 12 + (rand() % 12); // 12-24 spawn points
     map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
     
     int safeMargin = 30;
@@ -414,36 +398,33 @@ void CreateFortSpawnPoints(LocalMap* map)
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
         spawn->y = safeMargin + (rand() % (maxY - safeMargin));
         
         int typeRoll = rand() % 100;
-        if (typeRoll < 65) { // 65% Soldiers (65 NPCs)
+        if (typeRoll < 70) { // 70% Soldiers
             spawn->type = SPAWN_GUARD_POST;
             spawn->npcType = NPC_GUARD;
-            spawn->isUnique = false;
-            spawn->maxCount = 5 + (rand() % 6); // 5-10 soldiers
-            const char* ranks[] = {"Soldier", "Archer", "Knight", "Swordsman", "Spearman", "Crossbowman"};
-            snprintf(spawn->npcName, 50, ranks[rand() % 6]);
-        } else if (typeRoll < 85) { // 20% Support Staff (20 NPCs)
+        } else if (typeRoll < 90) { // 20% Support Staff
             spawn->type = SPAWN_HOUSE;
             spawn->npcType = NPC_VILLAGER;
-            spawn->isUnique = false;
-            spawn->maxCount = 3 + (rand() % 4); // 3-6 staff
-            const char* staff[] = {"Cook", "Blacksmith", "Clerk", "Engineer", "Medic", "Scout"};
-            snprintf(spawn->npcName, 50, staff[rand() % 6]);
-        } else { // 15% Officers (15 NPCs)
+        } else { // 10% Officers
             spawn->type = SPAWN_HOUSE;
             spawn->npcType = NPC_GUARD;
             spawn->isUnique = true;
-            spawn->maxCount = 2 + (rand() % 2); // 2-3 officers
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            const char* officers[] = {"Captain", "Lieutenant", "Sergeant", "Commander", "General"};
-            snprintf(spawn->npcName, 50, "%s %s %s", officers[rand() % 5], first, last);
         }
         
+        const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+        if (spawn->isUnique) {
+            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s %s", first, last);
+        } else {
+            snprintf(spawn->npcName, 50, "%s", first);
+        }
+        
+        spawn->maxCount = 2 + (rand() % 4);
         spawn->currentCount = 0;
         spawn->respawnTimer = spawn->isUnique ? 0 : (90 + (rand() % 120));
         spawn->respawnCounter = 0;
@@ -452,10 +433,10 @@ void CreateFortSpawnPoints(LocalMap* map)
     }
 }
 
-// ===== BANDIT CAMP SPAWN POINTS (10 NPCs total - non-location) =====
+// ===== BANDIT CAMP SPAWN POINTS =====
 void CreateBanditCampSpawnPoints(LocalMap* map)
 {
-    map->spawnPointCount = 3; // 3 spawn points = ~10 NPCs
+    map->spawnPointCount = 3 + (rand() % 4); // 3-7 spawn points
     map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
     
     int safeMargin = 30;
@@ -464,6 +445,7 @@ void CreateBanditCampSpawnPoints(LocalMap* map)
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
         spawn->y = safeMargin + (rand() % (maxY - safeMargin));
@@ -473,14 +455,14 @@ void CreateBanditCampSpawnPoints(LocalMap* map)
         if (i == 0 && rand() % 2 == 0) {
             spawn->isUnique = true;
             const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "Bandit Leader %s %s", first, last);
+            snprintf(spawn->npcName, 50, "%s the Bandit Leader", first);
             spawn->maxCount = 1;
             spawn->respawnTimer = 0;
         } else {
             spawn->isUnique = false;
-            snprintf(spawn->npcName, 50, "Bandit");
-            spawn->maxCount = 3 + (rand() % 4); // 3-6 bandits
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 2 + (rand() % 4);
             spawn->respawnTimer = 120 + (rand() % 120);
         }
         
@@ -491,10 +473,54 @@ void CreateBanditCampSpawnPoints(LocalMap* map)
     }
 }
 
+// ===== TRAVELER SPAWN POINTS =====
+void CreateTravelerSpawnPoints(LocalMap* map)
+{
+    map->spawnPointCount = 2 + (rand() % 4); // 2-6 spawn points
+    map->spawnPoints = (SpawnPoint**)malloc(map->spawnPointCount * sizeof(SpawnPoint*));
+    
+    int safeMargin = 30;
+    int maxX = map->width - safeMargin;
+    int maxY = map->height - safeMargin;
+    
+    for (int i = 0; i < map->spawnPointCount; i++) {
+        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        memset(spawn, 0, sizeof(SpawnPoint));
+        
+        spawn->x = safeMargin + (rand() % (maxX - safeMargin));
+        spawn->y = safeMargin + (rand() % (maxY - safeMargin));
+        spawn->type = SPAWN_TRAVELER;
+        
+        if (rand() % 3 == 0) {
+            spawn->npcType = NPC_BANDIT;
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 1 + (rand() % 2);
+        } else {
+            spawn->npcType = NPC_WANDERER;
+            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
+            snprintf(spawn->npcName, 50, "%s", first);
+            spawn->maxCount = 1;
+        }
+        
+        spawn->isUnique = false;
+        spawn->currentCount = 0;
+        spawn->respawnTimer = 180;
+        spawn->respawnCounter = 0;
+        
+        map->spawnPoints[i] = spawn;
+    }
+}
+
 // ===== SPAWN NPCS FROM POINTS =====
 void SpawnNPCsFromPoints(LocalMap* map, int worldX, int worldY)
 {
-    if (!map || !map->spawnPoints) return;
+    if (!map || !map->spawnPoints) {
+        printf("ERROR: map or spawnPoints is NULL in SpawnNPCsFromPoints\n");
+        return;
+    }
+    
+    printf("Spawning NPCs for map (%d,%d) with %d spawn points\n", worldX, worldY, map->spawnPointCount);
     
     // First, count how many NPCs already exist in this map
     int existingCount = 0;
@@ -510,56 +536,33 @@ void SpawnNPCsFromPoints(LocalMap* map, int worldX, int worldY)
         return;
     }
     
-    // Calculate total potential NPCs from all spawn points
-    int totalPotential = 0;
-    for (int i = 0; i < map->spawnPointCount; i++) {
-        totalPotential += map->spawnPoints[i]->maxCount;
-    }
-    
-    // Cap at MAX_NPCS_PER_MAP
-    if (totalPotential > MAX_NPCS_PER_MAP) {
-        printf("Warning: Map (%d,%d) would have %d NPCs, capping to %d\n", 
-               worldX, worldY, totalPotential, MAX_NPCS_PER_MAP);
-        
-        // Scale down all spawn points proportionally
-        float scale = (float)MAX_NPCS_PER_MAP / totalPotential;
-        for (int i = 0; i < map->spawnPointCount; i++) {
-            map->spawnPoints[i]->maxCount = 
-                (int)(map->spawnPoints[i]->maxCount * scale);
-            if (map->spawnPoints[i]->maxCount < 1) 
-                map->spawnPoints[i]->maxCount = 1;
-        }
-    }
-    
     // Now spawn NPCs
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = map->spawnPoints[i];
-        
-        // Check global limit
-        if (npcCount + spawn->maxCount > MAX_TOTAL_NPCS) {
-            printf("Global NPC limit reached! Cannot spawn more.\n");
-            return;
+        if (!spawn) {
+            printf("ERROR: spawn point %d is NULL\n", i);
+            continue;
         }
         
+        printf("  Spawn point %d: name='%s', type=%d, maxCount=%d\n", 
+               i, spawn->npcName, spawn->npcType, spawn->maxCount);
+        
         for (int j = 0; j < spawn->maxCount; j++) {
-            // Check if this specific NPC slot is already filled
-            bool alreadyExists = false;
-            for (int k = 0; k < npcCount; k++) {
-                if (npcs[k] && npcs[k]->spawnPoint == spawn && 
-                    npcs[k]->localX == spawn->x && npcs[k]->localY == spawn->y) {
-                    alreadyExists = true;
-                    break;
-                }
+            // Check global limit
+            if (npcCount >= MAX_TOTAL_NPCS) {
+                printf("Global NPC limit reached! Cannot spawn more.\n");
+                return;
             }
             
-            if (!alreadyExists) {
-                NPC* npc = CreateNPCFromSpawn(spawn, worldX, worldY);
-                if (npc) {
-                    npcs = (NPC**)realloc(npcs, (npcCount + 1) * sizeof(NPC*));
-                    npcs[npcCount] = npc;
-                    npcCount++;
-                    spawn->currentCount++;
-                }
+            NPC* npc = CreateNPCFromSpawn(spawn, worldX, worldY);
+            if (npc) {
+                npcs = (NPC**)realloc(npcs, (npcCount + 1) * sizeof(NPC*));
+                npcs[npcCount] = npc;
+                npcCount++;
+                spawn->currentCount++;
+                printf("    Spawned NPC: '%s'\n", npc->name);
+            } else {
+                printf("    Failed to create NPC from spawn\n");
             }
         }
     }
@@ -567,7 +570,7 @@ void SpawnNPCsFromPoints(LocalMap* map, int worldX, int worldY)
     printf("Map (%d,%d) now has %d NPCs\n", worldX, worldY, npcCount - existingCount);
 }
 
-// ===== UPDATE SPAWN POINTS (RESPAWN GENERIC NPCS) =====
+// ===== UPDATE SPAWN POINTS =====
 void UpdateSpawnPoints()
 {
     if (!player.isInLocalMap || !worldMap) return;
@@ -577,6 +580,7 @@ void UpdateSpawnPoints()
     
     for (int i = 0; i < map->spawnPointCount; i++) {
         SpawnPoint* spawn = map->spawnPoints[i];
+        if (!spawn) continue;
         
         // Only respawn generic NPCs
         if (!spawn->isUnique && spawn->currentCount < spawn->maxCount && spawn->respawnTimer > 0) {
@@ -585,12 +589,15 @@ void UpdateSpawnPoints()
             if (spawn->respawnCounter >= spawn->respawnTimer) {
                 int needed = spawn->maxCount - spawn->currentCount;
                 for (int j = 0; j < needed; j++) {
-                    NPC* npc = CreateNPCFromSpawn(spawn, player.worldPos.x, player.worldPos.y);
+                    if (npcCount >= MAX_TOTAL_NPCS) return;
                     
-                    npcs = (NPC**)realloc(npcs, (npcCount + 1) * sizeof(NPC*));
-                    npcs[npcCount] = npc;
-                    npcCount++;
-                    spawn->currentCount++;
+                    NPC* npc = CreateNPCFromSpawn(spawn, player.worldPos.x, player.worldPos.y);
+                    if (npc) {
+                        npcs = (NPC**)realloc(npcs, (npcCount + 1) * sizeof(NPC*));
+                        npcs[npcCount] = npc;
+                        npcCount++;
+                        spawn->currentCount++;
+                    }
                 }
                 spawn->respawnCounter = 0;
             }
@@ -601,7 +608,7 @@ void UpdateSpawnPoints()
 // ===== NPC DIED =====
 void NPCDied(NPC* npc)
 {
-    if (!npc->spawnPoint) return;
+    if (!npc || !npc->spawnPoint) return;
     
     npc->spawnPoint->currentCount--;
     
@@ -609,4 +616,4 @@ void NPCDied(NPC* npc)
         // Unique NPCs are gone forever
         npc->spawnPoint->maxCount = 0;
     }
-}
+}

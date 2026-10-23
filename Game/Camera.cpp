@@ -37,10 +37,10 @@ void SafeInitCamera(bool resetZoom)
         // Validate world position
         if (player.worldPos.x < 0 || player.worldPos.x >= currentMapWidth ||
             player.worldPos.y < 0 || player.worldPos.y >= currentMapHeight) {
-            printf("CRITICAL: Invalid world pos (%d,%d) in SafeInitCamera - resetting to (2,2)\n",
+            printf("CRITICAL: Invalid world pos (%d,%d) in SafeInitCamera - resetting to map centre\n",
                    player.worldPos.x, player.worldPos.y);
-            player.worldPos.x = 2;
-            player.worldPos.y = 2;
+            player.worldPos.x = currentMapWidth / 2;
+            player.worldPos.y = currentMapHeight / 2;
         }
         
         gameCamera.camera.target = (Vector2){ 
@@ -49,14 +49,15 @@ void SafeInitCamera(bool resetZoom)
         };
         
         if (resetZoom) {
-            if (currentMapWidth <= 16 && currentMapHeight <= 16) {
+            // tiles are 24px now; pick a zoom so a small world fits the window and big worlds stay readable
+            if (currentMapWidth <= 32 && currentMapHeight <= 32) {
                 gameCamera.zoom = 2.0f;
-            } else if (currentMapWidth <= 32 && currentMapHeight <= 32) {
-                gameCamera.zoom = 1.5f;
             } else if (currentMapWidth <= 64 && currentMapHeight <= 64) {
-                gameCamera.zoom = 1.0f;
+                gameCamera.zoom = 1.6f;
+            } else if (currentMapWidth <= 128 && currentMapHeight <= 128) {
+                gameCamera.zoom = 1.1f;
             } else {
-                gameCamera.zoom = 0.8f;
+                gameCamera.zoom = 0.9f;
             }
         }
     }
@@ -103,10 +104,10 @@ void UpdateCamera()
         // Validate world position
         if (player.worldPos.x < 0 || player.worldPos.x >= currentMapWidth ||
             player.worldPos.y < 0 || player.worldPos.y >= currentMapHeight) {
-            printf("CRITICAL: Invalid world pos (%d,%d) in UpdateCamera - resetting to (2,2)\n",
+            printf("CRITICAL: Invalid world pos (%d,%d) in UpdateCamera - resetting to map centre\n",
                    player.worldPos.x, player.worldPos.y);
-            player.worldPos.x = 2;
-            player.worldPos.y = 2;
+            player.worldPos.x = currentMapWidth / 2;
+            player.worldPos.y = currentMapHeight / 2;
         }
         
         targetPos.x = player.worldPos.x * TILE_SIZE + TILE_SIZE / 2.0f;
@@ -129,7 +130,7 @@ void UpdateCamera()
             minZoom = 0.5f;
             maxZoom = 3.0f;
         } else {
-            minZoom = 0.3f;
+            minZoom = 0.07f;      // a 512x512 world needs ~0.1 to fit a 1280px window
             maxZoom = 4.0f;
         }
         
@@ -158,8 +159,14 @@ void ToggleFullscreen(int windowWidth, int windowHeight)
         SetWindowSize(windowWidth, windowHeight);
     }
     
-    if (currentState == STATE_PLAYING) {
-        gameCamera.camera.offset.x = GetScreenWidth() / 2.0f;
-        gameCamera.camera.offset.y = GetScreenHeight() / 2.0f;
-    }
+    gameCamera.camera.offset.x = GetScreenWidth() / 2.0f;
+    gameCamera.camera.offset.y = GetScreenHeight() / 2.0f;
+}
+
+float FitWorldZoom()
+{
+    float zx = (float)(GetScreenWidth() - 40) / (float)(currentMapWidth * TILE_SIZE);
+    float zy = (float)(GetScreenHeight() - 140) / (float)(currentMapHeight * TILE_SIZE);
+    float z = zx < zy ? zx : zy;
+    return ClampFloat(z, 0.07f, 2.4f);
 }

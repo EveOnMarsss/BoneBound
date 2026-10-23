@@ -1,5 +1,303 @@
 === BONEBOUND DEBUG LOG ===
-Started: Fri Feb 27 22:49:52 2026
-Program started
+Version: 0.0.9
+Started: Fri Oct 23 16:05:02 2026
+Program started (v0.0.9)
 Window initialized
-Player initialized at (2,2)
+Tileset loaded: resources/tileset/DB_curses_12x12.png (192x192)
+World ready: 512x512 seed 1054933279, start (410,324) 'Crestmouth II'
+
+=== ENTER LOCAL MAP DEBUG ===
+Step 0: Starting EnterLocalMap(410,324)
+Step 1: worldMap OK at 0000029645592f80
+Current map size: 512x512
+Step 2: Coordinates valid
+Accessing worldMap[324][410]
+Step 3: Got tile at 000002968bf798f0
+Tile data: type='.', hasLocalMap=1, locationType=1
+Step 4: hasLocalMap OK
+Generating local map...
+
+=== GENERATING LOCAL MAP FOR (410,324) ===
+Map size: 256x256
+=== PLACE VILLAGE START ===
+Map dimensions: 256x256
+Center coordinates: (128,128)
+Creating town square at center...
+Placed fountain at (128,128)
+Village size: 1
+Building targets: houses=6, shops=1, inns=0, blacksmiths=0, guards=1
+Placing houses in grid pattern...
+Grid start: (48,58), spacing: 30
+  Attempting house 1 at grid (0,0) -> (49,59)
+    Area free, wealth level: 0
+    CreateHouse: x=49, y=59, wealthLevel=0
+    CreateBuilding: type=0, x=49, y=59, width=10, height=5
+    Allocating layout with 5 rows
+    Building created successfully
+    Adding furniture to house...
+    House created successfully
+    SetBuildingDoor: building at (49,59), doorPos=4
+    Building size: 10x5
+    Random door roll: 1
+    Random door at TOP: layout[0][5]
+    Door placed successfully at layout[0][5]
+    SetBuildingDoor: door at world (54,59), layout (5,0)
+    PlaceBuildingOnMap: building at (49,59) size 10x5
+      Placed tile '#' at map (49,59) from building layout[0][0]
+      Placed tile '#' at map (50,59) from building layout[0][1]
+      Placed tile '#' at map (51,59) from building layout[0][2]
+      Placed tile '#' at map (52,59) from building layout[0][3]
+      Placed tile '#' at map (53,59) from building layout[0][4]
+    PlaceBuildingOnMap: placed 50 tiles
+    House placed successfully. Total houses: 1
+  Attempting house 2 at grid (1,0) -> (75,55)
+    Area free, wealth level: 0
+    CreateHouse: x=75, y=55, wealthLevel=0
+    CreateBuilding: type=0, x=75, y=55, width=8, height=6
+    Allocating layout with 6 rows
+    Building created successfully
+    Adding furniture to house...
+    House created successfully
+    SetBuildingDoor: building at (75,55), doorPos=0
+    Building size: 8x6
+    Door at BOTTOM: layout[5][4]
+    Door placed successfully at layout[5][4]
+    SetBuildingDoor: door at world (79,60), layout (4,5)
+    PlaceBuildingOnMap: building at (75,55) size 8x6
+      Placed tile '#' at map (75,55) from building layout[0][0]
+      Placed tile '#' at map (76,55) from building layout[0][1]
+      Placed tile '#' at map (77,55) from building layout[0][2]
+      Placed tile '#' at map (78,55) from building layout[0][3]
+      Placed tile '#' at map (79,55) from building layout[0][4]
+    PlaceBuildingOnMap: placed 48 tiles
+    House placed successfully. Total houses: 2
+  Attempting house 3 at grid (2,0) -> (107,60)
+    Area free, wealth level: 1
+    CreateHouse: x=107, y=60, wealthLevel=1
+    CreateBuilding: type=0, x=107, y=60, width=10, height=6
+    Allocating layout with 6 rows
+    Building created successfully
+    Adding furniture to house...
+    House created successfully
+    SetBuildingDoor: building at (107,60), doorPos=0
+    Building size: 10x6
+    Door at BOTTOM: layout[5][5]
+    Door placed successfully at layout[5][5]
+    SetBuildingDoor: door at world (112,65), layout (5,5)
+    PlaceBuildingOnMap: building at (107,60) size 10x6
+      Placed tile '#' at map (107,60) from building layout[0][0]
+      Placed tile '#' at map (108,60) from building layout[0][1]
+      Placed tile '#' at map (109,60) from building layout[0][2]
+      Placed tile '#' at map (110,60) from building layout[0][3]
+      Placed tile '#' at map (111,60) from building layout[0][4]
+    PlaceBuildingOnMap: placed 60 tiles
+    House placed successfully. Total houses: 3
+  Attempting house 4 at grid (3,0) -> (136,57)
+    Area free, wealth level: 1
+    CreateHouse: x=136, y=57, wealthLevel=1
+    CreateBuilding: type=0, x=136, y=57, width=9, height=5
+    Allocating layout with 5 rows
+    Building created successfully
+    Adding furniture to house...
+    House created successfully
+    SetBuildingDoor: building at (136,57), doorPos=0
+    Building size: 9x5
+    Door at BOTTOM: layout[4][4]
+    Door placed successfully at layout[4][4]
+    SetBuildingDoor: door at world (140,61), layout (4,4)
+    PlaceBuildingOnMap: building at (136,57) size 9x5
+      Placed tile '#' at map (136,57) from building layout[0][0]
+      Placed tile '#' at map (137,57) from building layout[0][1]
+      Placed tile '#' at map (138,57) from building layout[0][2]
+      Placed tile '#' at map (139,57) from building layout[0][3]
+      Placed tile '#' at map (140,57) from building layout[0][4]
+    PlaceBuildingOnMap: placed 45 tiles
+    House placed successfully. Total houses: 4
+  Attempting house 5 at grid (0,1) -> (47,90)
+    Area free, wealth level: 0
+    CreateHouse: x=47, y=90, wealthLevel=0
+    CreateBuilding: type=0, x=47, y=90, width=8, height=5
+    Allocating layout with 5 rows
+    Building created successfully
+    Adding furniture to house...
+    House created successfully
+    SetBuildingDoor: building at (47,90), doorPos=3
+    Building size: 8x5
+    Door at RIGHT: layout[2][7]
+    Door placed successfully at layout[2][7]
+    SetBuildingDoor: door at world (54,92), layout (7,2)
+    PlaceBuildingOnMap: building at (47,90) size 8x5
+      Placed tile '#' at map (47,90) from building layout[0][0]
+      Placed tile '#' at map (48,90) from building layout[0][1]
+      Placed tile '#' at map (49,90) from building layout[0][2]
+      Placed tile '#' at map (50,90) from building layout[0][3]
+      Placed tile '#' at map (51,90) from building layout[0][4]
+    PlaceBuildingOnMap: placed 40 tiles
+    House placed successfully. Total houses: 5
+  Attempting house 6 at grid (1,1) -> (80,90)
+    Area free, wealth level: 1
+    CreateHouse: x=80, y=90, wealthLevel=1
+    CreateBuilding: type=0, x=80, y=90, width=10, height=6
+    Allocating layout with 6 rows
+    Building created successfully
+    Adding furniture to house...
+    House created successfully
+    SetBuildingDoor: building at (80,90), doorPos=3
+    Building size: 10x6
+    Door at RIGHT: layout[3][9]
+    Door placed successfully at layout[3][9]
+    SetBuildingDoor: door at world (89,93), layout (9,3)
+    PlaceBuildingOnMap: building at (80,90) size 10x6
+      Placed tile '#' at map (80,90) from building layout[0][0]
+      Placed tile '#' at map (81,90) from building layout[0][1]
+      Placed tile '#' at map (82,90) from building layout[0][2]
+      Placed tile '#' at map (83,90) from building layout[0][3]
+      Placed tile '#' at map (84,90) from building layout[0][4]
+    PlaceBuildingOnMap: placed 60 tiles
+    House placed successfully. Total houses: 6
+Houses placed: 6/6
+Placing shops...
+  Attempting shop at (183,129)
+    CreateShop: x=183, y=129, shopLevel=2
+    CreateBuilding: type=1, x=183, y=129, width=12, height=6
+    Allocating layout with 6 rows
+    Building created successfully
+    Adding shop features...
+    Shop created successfully
+    SetBuildingDoor: building at (183,129), doorPos=2
+    Building size: 12x6
+    Door at LEFT: layout[3][0]
+    Door placed successfully at layout[3][0]
+    SetBuildingDoor: door at world (183,132), layout (0,3)
+    PlaceBuildingOnMap: building at (183,129) size 12x6
+      Placed tile '#' at map (183,129) from building layout[0][0]
+      Placed tile '#' at map (184,129) from building layout[0][1]
+      Placed tile '#' at map (185,129) from building layout[0][2]
+      Placed tile '#' at map (186,129) from building layout[0][3]
+      Placed tile '#' at map (187,129) from building layout[0][4]
+    PlaceBuildingOnMap: placed 72 tiles
+    Shop placed
+Shops placed: 1/1
+Placing guard posts...
+  Attempting guard post 1 at (113,48)
+    CreateGuardPost: x=113, y=48, postLevel=1
+    CreateBuilding: type=4, x=113, y=48, width=8, height=6
+    Allocating layout with 6 rows
+    Building created successfully
+    Adding guard post features...
+    Guard post created successfully
+    SetBuildingDoor: building at (113,48), doorPos=0
+    Building size: 8x6
+    Door at BOTTOM: layout[5][4]
+    Door placed successfully at layout[5][4]
+    SetBuildingDoor: door at world (117,53), layout (4,5)
+    PlaceBuildingOnMap: building at (113,48) size 8x6
+      Placed tile '#' at map (113,48) from building layout[0][0]
+      Placed tile '#' at map (114,48) from building layout[0][1]
+      Placed tile '#' at map (115,48) from building layout[0][2]
+      Placed tile '#' at map (116,48) from building layout[0][3]
+      Placed tile '#' at map (117,48) from building layout[0][4]
+    PlaceBuildingOnMap: placed 48 tiles
+    Guard post placed
+Guard posts placed: 1/1
+=== VILLAGE PLACEMENT COMPLETE ===
+Total buildings placed: 8
+Final building count in map: 8
+================================
+  Generating village spawn points...
+  Created spawn point 1: Sarah at (54,61) type=0
+  Created spawn point 2: Ysmay Ortiz at (79,58) type=0
+  Created spawn point 3: Bryan at (112,63) type=0
+  Created spawn point 4: Alice at (140,59) type=0
+  Created spawn point 5: Ashley at (51,92) type=0
+  Created spawn point 6: John at (85,93) type=0
+  Created spawn point 7: Mark Weaver at (189,132) type=2
+  Created spawn point 8: Wayne at (117,51) type=1
+  Created spawn point 9: Sandra at (54,61) type=0
+  Created spawn point 10: Valen at (79,58) type=0
+  Created spawn point 11: Amy at (112,63) type=0
+  Created spawn point 12: Larry at (140,59) type=0
+  Created spawn point 13: Russell at (51,92) type=0
+  Created spawn point 14: Ronald at (85,93) type=0
+  Created spawn point 15: Christian Sexton at (189,132) type=2
+  Created spawn point 16: Kathryn at (117,51) type=1
+  Generated 16 spawn points with proper names
+=== LOCAL MAP GENERATION COMPLETE ===
+
+Local map generation complete
+Step 5: localMap exists at 000002968d3807c0
+Local map stats: buildings=8, spawnPoints=16
+Step 6: Spawning NPCs...
+  SpawnNPCsForMap starting...
+  map has 16 spawn points
+  Spawn point 0: at (54,61), type=0, maxCount=1
+  Spawn point 1: at (79,58), type=0, maxCount=1
+  Spawn point 2: at (112,63), type=0, maxCount=1
+  Spawn point 3: at (140,59), type=0, maxCount=2
+  Spawn point 4: at (51,92), type=0, maxCount=2
+  Spawn point 5: at (85,93), type=0, maxCount=2
+  Spawn point 6: at (189,132), type=0, maxCount=1
+  Spawn point 7: at (117,51), type=0, maxCount=2
+  Spawn point 8: at (54,61), type=0, maxCount=1
+  Spawn point 9: at (79,58), type=0, maxCount=2
+  Spawn point 10: at (112,63), type=0, maxCount=1
+  Spawn point 11: at (140,59), type=0, maxCount=2
+  Spawn point 12: at (51,92), type=0, maxCount=1
+  Spawn point 13: at (85,93), type=0, maxCount=2
+  Spawn point 14: at (189,132), type=0, maxCount=1
+  Spawn point 15: at (117,51), type=0, maxCount=2
+  Spawning NPCs...
+    Creating 1 NPCs from spawn 0
+      Spawned NPC 1
+    Creating 1 NPCs from spawn 1
+      Spawned NPC 2
+    Creating 1 NPCs from spawn 2
+      Spawned NPC 3
+    Creating 2 NPCs from spawn 3
+      Spawned NPC 4
+      Spawned NPC 5
+    Creating 2 NPCs from spawn 4
+      Spawned NPC 6
+      Spawned NPC 7
+    Creating 2 NPCs from spawn 5
+      Spawned NPC 8
+      Spawned NPC 9
+    Creating 1 NPCs from spawn 6
+      Spawned NPC 10
+    Creating 2 NPCs from spawn 7
+      Spawned NPC 11
+      Spawned NPC 12
+    Creating 1 NPCs from spawn 8
+      Spawned NPC 13
+    Creating 2 NPCs from spawn 9
+      Spawned NPC 14
+      Spawned NPC 15
+    Creating 1 NPCs from spawn 10
+      Spawned NPC 16
+    Creating 2 NPCs from spawn 11
+      Spawned NPC 17
+      Spawned NPC 18
+    Creating 1 NPCs from spawn 12
+      Spawned NPC 19
+    Creating 2 NPCs from spawn 13
+      Spawned NPC 20
+      Spawned NPC 21
+    Creating 1 NPCs from spawn 14
+      Spawned NPC 22
+    Creating 2 NPCs from spawn 15
+      Spawned NPC 23
+      Spawned NPC 24
+  Spawned NPCs, total now: 24
+Step 7: NPC spawning complete
+Setting player position...
+hasExitPoint = 0
+First time entering, using center (128,128)
+Position set to (128,128)
+Final position after clamping: (127,127)
+isInLocalMap set to true
+Calling SafeInitCamera(false)...
+Camera initialized
+=== ENTER LOCAL MAP COMPLETE ===
+
+
+Closed: Fri Oct 23 16:06:00 2026

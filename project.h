@@ -11,13 +11,16 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <stdint.h>
 #include "Systems/Logger.h"
 // ===== GAME CONSTANTS =====
-#define TILE_SIZE 32
+#define GAME_VERSION "0.0.9"
+#define TILE_SIZE 24            // 2x the 12px tileset glyphs (crisp pixels)
+#define TILESET_CELL 12
 #define LOCAL_MAP_WIDTH 256
 #define LOCAL_MAP_HEIGHT 256
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 600
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 #define DEFAULT_WORLD_WIDTH 20
 #define DEFAULT_WORLD_HEIGHT 15
 #define MAX_NPCS 1000
@@ -36,7 +39,8 @@ typedef enum {
 
 typedef enum {
     STATE_TITLE, STATE_MAPSIZE, STATE_SEED,
-    STATE_PLAYING, STATE_SAVE_MENU, STATE_LOAD_MENU,STATE_CHARACTER_CREATION
+    STATE_PLAYING, STATE_SAVE_MENU, STATE_LOAD_MENU, STATE_CHARACTER_CREATION,
+    STATE_PAUSE, STATE_GENERATING, STATE_CHOOSE_START
 } GameState;
 
 typedef enum {
@@ -68,6 +72,35 @@ typedef enum {
     LOCATION_TEMPLE
     
 } LocationType;
+
+
+// ===== BIOMES (world generation) =====
+typedef enum {
+    BIOME_DEEP_OCEAN = 0,
+    BIOME_OCEAN,
+    BIOME_LAKE,
+    BIOME_BEACH,
+    BIOME_DESERT,
+    BIOME_SAVANNA,
+    BIOME_GRASSLAND,
+    BIOME_FOREST,
+    BIOME_JUNGLE,
+    BIOME_SWAMP,
+    BIOME_TAIGA,
+    BIOME_TUNDRA,
+    BIOME_GLACIER,
+    BIOME_HILLS,
+    BIOME_MOUNTAINS,
+    BIOME_SNOW_PEAKS,
+    BIOME_COUNT
+} BiomeType;
+
+#define SEA_LEVEL 0.35f   // elevation (0..1) at which land meets water
+
+// Directions for rivers / roads crossing between world tiles (bit i of a mask = direction i)
+// 0=N 1=NE 2=E 3=SE 4=S 5=SW 6=W 7=NW
+static const int DIR_DX[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
+static const int DIR_DY[8] = { -1, -1, 0, 1, 1, 1, 0, -1 };
 
 // ===== FORWARD DECLARATIONS =====
 typedef struct WorldTile WorldTile;
@@ -112,58 +145,21 @@ struct SpawnPoint {
     float respawnCounter;
 };
 
-// Collision helper - defines what tiles the player can walk on
-static inline bool IsTileWalkable(char tile)
-{
-    switch (tile) {
-        // ===== TERRAIN - Always walkable =====
-        case '.':  // Grass/ground
-        case 'T':  // Tree/Forest
-        case '^':  // Mountain/Hills
-        case '~':  // Water
-        case ',':  // Dirt road/path
-            return true;
-            
-        // ===== BUILDING EXTERIORS =====
-        case '#':  // Wall - NOT walkable
-            return false;
-            
-        // ===== DOORS - Walkable (entrances/exits) =====
-        case 'D':  // Door
-            return true;
-            
-        // ===== FURNITURE - Most is NOT walkable =====
-        case 'B':  // Bed - NOT walkable (you sleep on it, not walk through it)
-        case 'C':  // Chair - NOT walkable (occupied)
-        case 'S':  // Shelf/Counter - NOT walkable (blocks movement)
-        case 'A':  // Anvil - NOT walkable (heavy equipment)
-        case 'F':  // Fireplace/Fountain - NOT walkable (hazard/feature)
-        case 'H':  // Chest - NOT walkable (storage)
-        case 'P':  // Pillar - NOT walkable (structural)
-        case 'R':  // Altar - NOT walkable (sacred object)
-        case 'K':  // Throne - NOT walkable (seat of power)
-        case 'Q':  // Barrel/Crate - NOT walkable (obstacle)
-            return true;
-            
-        // ===== SPECIAL/UNKNOWN =====
-        default:
-            // For safety, treat unknown tiles as not walkable
-            return false;
-    }
-}
-
-// Add this debug version for now:
-static inline bool IsTileWalkableDebug(char tile, int x, int y)
-{
-    if (tile == '.' || tile == 'T' || tile == '^' || 
-        tile == '~' || tile == ',' || tile == 'D') {
-        return true;
-    }
-    LOG("WARNING: Non-walkable tile '%c' at (%d,%d)\n", tile, x, y);
-    return false;
-}
+// Collision helper - the single source of truth lives in World/Tiles.cpp (tile table)
+bool TileWalkable(char tile);
+static inline bool IsTileWalkable(char tile) { return TileWalkable(tile); }
 
 // NPC
+// Add these enums for conversation
+typedef enum {
+    DIALOG_GREETING,
+    DIALOG_CHAT,
+    DIALOG_QUEST,
+    DIALOG_TRADE,
+    DIALOG_FAREWELL
+} DialogState;
+
+// Update NPC struct with conversation fields
 struct NPC {
     int id;
     char name[50];
@@ -179,19 +175,32 @@ struct NPC {
     char displayChar;
     Color color;
     char greeting[100];
+    char chatLines[5][100];      // Multiple chat options
+    int chatLineCount;
+    char questText[200];          // Quest description if has quest
+    char tradeText[100];          // Trade offer text
+    char farewell[100];
     
     // AI
     int wanderTimer;
     int wanderDirection;
     float respawnTimer;
-    bool isActive;  // Add this
+    bool isActive;
     
     // Interaction
     bool canTalk;
     bool canTrade;
     bool givesQuests;
+    bool hasQuest;                 // Does NPC currently have a quest?
     bool isUnique;
     bool isHostile;
+    bool isCat;
+    bool isDog;
+    
+    // Conversation
+    bool isTalking;                // Currently talking to player
+    DialogState dialogState;
+    int selectedOption;
     
     // Stats
     int health;
@@ -205,7 +214,7 @@ struct NPC {
 
 // World Tile
 struct WorldTile {
-    char worldTile;
+    char worldTile;          // legacy summary glyph ('~' water, 'T' forest, '^' mountain, '.' other)
     LocalMap* localMap;
     bool hasLocalMap;
     LocationType locationType;
@@ -214,6 +223,17 @@ struct WorldTile {
     int lastExitX;
     int lastExitY;
     bool hasExitPoint;
+
+    // ---- procedural world data (filled by WorldGen) ----
+    BiomeType biome;
+    float elevation;         // 0..1, SEA_LEVEL = shoreline
+    float temperature;       // 0 (polar) .. 1 (tropical)
+    float moisture;          // 0 (arid) .. 1 (soaked)
+    unsigned char riverMask; // direction bits: a river flows through this tile toward/from those neighbours
+    unsigned char roadMask;  // direction bits: a road runs through this tile
+    unsigned char riverWidth;// river width in local-map cells (0 = no river)
+    unsigned char isLake;
+    unsigned short riverFlow;// accumulated flow (for display / debugging)
 };
 
 // Player stats
@@ -222,9 +242,16 @@ typedef struct {
     Position localPos;
     bool isInLocalMap;
     bool isCat;
-    int health;
+    char name[32];
+    int currentHealth;
     int maxHealth;
     int gold;
+    int xp;
+    int level;
+    int npcRelation;
+    int factionRelation;
+    int playTimeMinutes;
+    int questsCompleted;
 } PlayerData;
 
 // ===== GLOBAL VARIABLES =====
@@ -238,8 +265,12 @@ extern int currentMapWidth;
 extern int currentMapHeight;
 extern MapConfig mapSizes[NUM_SIZES];
 extern bool shouldQuit;
+extern unsigned int worldSeed;
 extern int selectedOption;
 extern int saveSlotSelected;
+extern NPC* talkingNPC;
+extern bool isInConversation;
+extern int conversationChoice;
 
 // ===== NAME DATABASE DECLARATIONS =====
 extern const char* FIRST_NAMES[];

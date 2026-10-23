@@ -4,30 +4,12 @@
 #include <stdio.h>
 #include <time.h>
 
-static FILE* logFile = NULL;
-
-static void InitLogger()
-{
-    if (!logFile) {
-        logFile = fopen("debug_log.txt", "w");
-        if (logFile) {
-            time_t now = time(NULL);
-            fprintf(logFile, "=== BONEBOUND DEBUG LOG ===\n");
-            fprintf(logFile, "Started: %s", ctime(&now));
-            fflush(logFile);
-        }
-    }
-}
-
-static void CloseLogger()
-{
-    if (logFile) {
-        time_t now = time(NULL);
-        fprintf(logFile, "\nClosed: %s", ctime(&now));
-        fclose(logFile);
-        logFile = NULL;
-    }
-}
+// FIX: the old version declared `static FILE* logFile` in this header, so every .cpp file got
+// its own copy and each one reopened debug_log.txt with "w" - they kept truncating each other.
+// Now there is exactly ONE log file handle, defined in Globals.cpp.
+extern FILE* logFile;
+void InitLogger();
+void CloseLogger();
 
 #define LOG(...) \
     do { \

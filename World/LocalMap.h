@@ -61,6 +61,7 @@ typedef enum {
 // Local Map
 struct LocalMap {
     char** tiles;
+    unsigned char* biome;      // BiomeType per cell (width*height) - used for tinting and ground colour
     int width;
     int height;
     SpawnPoint** spawnPoints;
@@ -74,11 +75,10 @@ void GenerateLocalMap(int worldX, int worldY);
 void EnterLocalMap(int worldX, int worldY);
 void ExitLocalMap();
 void DrawLocalMap();
-Color GetTileColor(char tile);
 void RemoveNPCsFromMap(int worldX, int worldY);
+bool TravelToAdjacentTile(int dx, int dy);   // seamless travel between world tiles (dx,dy is one of the 4 directions)
 
-// Terrain generation
-void GenerateBaseTerrain(LocalMap* map, char worldTileType);
+// Terrain generation lives in LocalTerrain.cpp (GenerateLocalTerrain)
 
 // Structure placement
 void PlaceStructuresForLocation(LocalMap* map, LocationType locationType);
@@ -127,4 +127,4 @@ void GenerateTravelerSpawnPoints(LocalMap* map);
 // NPC management
 void SpawnNPCsForMap(LocalMap* map, int worldX, int worldY);
 
-#endif
+#endif

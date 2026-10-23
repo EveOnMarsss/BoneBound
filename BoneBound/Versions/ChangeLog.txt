@@ -1,3 +1,9 @@
+03/07/2026
+-Update To Version 0.0.7
+    -Added Player Creation
+    -Added Simple Interaction With NPC(Press E when by them)
+    -Varied furniture placement in houses
+    -Randomized door locations on buildings
 02/27/2026
 -Update To Version 0.0.6
     -Increased NPC spawn rates in villages
