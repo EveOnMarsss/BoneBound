@@ -6,6 +6,7 @@
 #include "Systems/CrashHandler.h"
 #include "Systems/Logger.h"
 #include "Render/Tileset.h"
+#include "Systems/DataLoader.h"
 
 int main()
 {
@@ -15,7 +16,7 @@ int main()
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "BoneBound");
     LOG("Window initialized\n");
-
+    LoadGameData(gameData);
     // FIX: raylib quits on ESC by default, which closed the game when cancelling a name edit or
     // leaving a conversation. ESC now belongs to the game (pause menu); quit from the menus instead.
     SetExitKey(KEY_NULL);

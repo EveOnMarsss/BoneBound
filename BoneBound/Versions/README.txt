@@ -3,8 +3,8 @@ BoneBound - Game
 
 HOW TO PLAY:
 - Arrow Keys or WASD to move
-- F for Fullscreen
 - Backspace to return to menu
+- F11 to FullScreen
 - ESC to quit
 
 SYSTEM REQUIREMENTS:
@@ -14,6 +14,7 @@ SYSTEM REQUIREMENTS:
 INSTRUCTIONS:
 1. Extract all files to a folder
 2. Double-click BoneBound.exe to play
+4. Make sure BoneBound.exe and resources are in the same location
 3. No installation needed!
 
 TROUBLESHOOTING:

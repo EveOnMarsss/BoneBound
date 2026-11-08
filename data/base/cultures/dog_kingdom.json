@@ -1,0 +1,7 @@
+
+{
+  "id": "dog_kingdom",
+  "species": "dog",
+  "settlement": { "starts": ["Bark", "Woof", "Grr"], "ends": ["ton", "ville", "bury"] },
+  "people":     { "starts": ["Ruff", "Snuf", "Wag"], "ends": ["ins", "o", "y"] }
+}

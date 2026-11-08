@@ -1,3 +1,14 @@
+10/23/2026
+-Update To Version 0.0.9
+    -Revamp Of Textures
+    -Revamp Of World Generation
+    -Revamp Of Local Generation
+    -Added the ability to pick a starting location
+    -Currently using DB_curses_12x12 tile set and will be working on getting the game its own tile set.
+    -Improved Performance only using 80MB of RAM
+5/15/2026
+-Update To Version 0.0.8
+    -Reworking game No Public Version
 03/07/2026
 -Update To Version 0.0.7
     -Added Player Creation

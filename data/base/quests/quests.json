@@ -1,0 +1,8 @@
+{
+    "quests": [
+        { "id": "fetch_lost_sword", "name": "Find the Lost Sword", "type": "fetch", "item": "lost_sword",
+          "description": "Retrieve the legendary sword from {place}.", "reward_gold": 100 },
+        { "id": "slay_dragon", "name": "Defeat the Dragon", "type": "kill",
+          "description": "Slay the dragon terrorizing {place}.", "reward_gold": 200 }
+    ]
+}

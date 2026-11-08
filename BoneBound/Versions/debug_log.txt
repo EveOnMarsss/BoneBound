@@ -1,5 +1,8 @@
 === BONEBOUND DEBUG LOG ===
-Started: Wed Mar 04 21:21:46 2026
-Program started
+Version: 0.0.9
+Started: Fri Oct 23 17:25:28 2026
+Program started (v0.0.9)
 Window initialized
-Player initialized at (2,2)
+Tileset loaded: resources/tileset/DB_curses_12x12.png (192x192)
+
+Closed: Fri Oct 23 17:26:02 2026

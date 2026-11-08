@@ -1,0 +1,8 @@
+{
+    "items": [
+        { "id": "health_potion", "name": "Health Potion", "type": "consumable", "heal": 50, "value": 10 },
+        { "id": "iron_sword",    "name": "Iron Sword",    "type": "weapon", "attack": 10, "value": 50 },
+        { "id": "ducal_letter",  "name": "Sealed Letter", "type": "quest", "value": 0 },
+        { "id": "lost_sword",    "name": "lost Sword",    "type": "quest", "attack": 10, "value": 0 }
+    ]
+}

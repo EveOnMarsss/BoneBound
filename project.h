@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include "Systems/Logger.h"
 // ===== GAME CONSTANTS =====
-#define GAME_VERSION "0.0.9"
+#define GAME_VERSION "0.0.8"
 #define TILE_SIZE 24            // 2x the 12px tileset glyphs (crisp pixels)
 #define TILESET_CELL 12
 #define LOCAL_MAP_WIDTH 256

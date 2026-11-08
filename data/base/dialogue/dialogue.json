@@ -1,0 +1,6 @@
+{
+    "lines": [
+        { "id": "greet_villager_welcome", "category": "greeting", "requires": { "role": "villager" }, "text": "Welcome to our village, traveler." },
+        { "id": "greet_smith_forge", "category": "greeting", "requires": { "role": "blacksmith" }, "text": "I can forge the finest weapons for you." }
+    ]
+}

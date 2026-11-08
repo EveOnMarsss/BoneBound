@@ -1,0 +1,6 @@
+{
+  "id": "cat_kingdom",
+  "species": "cat",
+  "settlement": { "starts": ["Kech", "Mew", "Sil"], "ends": ["ye", "haven", "claw"] },
+  "people":     { "starts": ["Whis", "Mis", "Tab"],  "ends": ["ker", "ty", "by"] }
+}
