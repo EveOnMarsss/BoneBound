@@ -1499,8 +1499,7 @@ void GenerateVillageSpawnPoints(LocalMap* map)
             spawn->isUnique = false;
             
             // FIX: Use actual name from database, not "Traveler"
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             
             spawn->type = SPAWN_TRAVELER;
             spawn->currentCount = 0;
@@ -1598,13 +1597,7 @@ void GenerateVillageSpawnPoints(LocalMap* map)
                 }
                 
                 // FIX: Generate actual name from database
-                const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-                if (spawn->isUnique) {
-                    const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-                    snprintf(spawn->npcName, 50, "%s %s", first, last);
-                } else {
-                    snprintf(spawn->npcName, 50, "%s", first);
-                }
+                // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
                 
             } else {
                 // Building is NULL, place randomly with proper name
@@ -1615,8 +1608,7 @@ void GenerateVillageSpawnPoints(LocalMap* map)
                 spawn->isUnique = false;
                 
                 // Generate proper name
-                const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-                snprintf(spawn->npcName, 50, "%s", first);
+                // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             }
         } else {
             // No buildings, place randomly with proper name
@@ -1627,8 +1619,7 @@ void GenerateVillageSpawnPoints(LocalMap* map)
             spawn->isUnique = false;
             
             // Generate proper name
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
         }
         
         spawn->type = SPAWN_HOUSE;
@@ -1720,7 +1711,7 @@ void GenerateCastleSpawnPoints(LocalMap* map)
         }
         
         for (int j = 0; j < numSpawns && spawnIndex < map->spawnPointCount; j++) {
-            SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+            SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
             memset(spawn, 0, sizeof(SpawnPoint));
             
             spawn->x = b->x + (rand() % b->width);
@@ -1757,7 +1748,7 @@ void GenerateCaveSpawnPoints(LocalMap* map)
     map->spawnPoints = (SpawnPoint**)malloc(numSpawns * sizeof(SpawnPoint*));
     
     for (int i = 0; i < numSpawns; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         if (map->buildingCount > 0) {
@@ -1805,7 +1796,7 @@ void GenerateTowerSpawnPoints(LocalMap* map)
     map->spawnPoints = (SpawnPoint**)malloc(numSpawns * sizeof(SpawnPoint*));
     
     for (int i = 0; i < numSpawns; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         Building* tower = NULL;
@@ -1872,7 +1863,7 @@ void GenerateDungeonSpawnPoints(LocalMap* map)
     }
     
     for (int i = 0; i < numSpawns; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         if (entrance) {
@@ -1932,7 +1923,7 @@ void GenerateRuinsSpawnPoints(LocalMap* map)
     map->spawnPoints = (SpawnPoint**)malloc(numSpawns * sizeof(SpawnPoint*));
     
     for (int i = 0; i < numSpawns; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         if (map->buildingCount > 0) {
@@ -2040,7 +2031,7 @@ void GenerateFortSpawnPoints(LocalMap* map)
         }
         
         for (int j = 0; j < numSpawns && spawnIndex < map->spawnPointCount; j++) {
-            SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+            SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
             memset(spawn, 0, sizeof(SpawnPoint));
             
             spawn->x = b->x + (rand() % b->width);
@@ -2077,7 +2068,7 @@ void GenerateBanditCampSpawnPoints(LocalMap* map)
     map->spawnPoints = (SpawnPoint**)malloc(numSpawns * sizeof(SpawnPoint*));
     
     for (int i = 0; i < numSpawns; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = 50 + (rand() % 150);
@@ -2116,7 +2107,7 @@ void GenerateTravelerSpawnPoints(LocalMap* map)
     map->spawnPoints = (SpawnPoint**)malloc(numSpawns * sizeof(SpawnPoint*));
     
     for (int i = 0; i < numSpawns; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = 50 + (rand() % 150);
@@ -3478,4 +3469,4 @@ void RemoveNPCsFromMap(int worldX, int worldY)
         }
     }
     npcCount = newCount;
-}
+}

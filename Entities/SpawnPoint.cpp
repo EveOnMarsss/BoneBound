@@ -97,13 +97,7 @@ void CreateTownSpawnPoints(LocalMap* map)
         spawn->maxCount = 1 + (rand() % 2); // 1-2 NPCs per spawn
         
         // Generate a REAL name - ALWAYS use the name database, NEVER "Villager"
-        const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-        if (spawn->isUnique) {
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s %s", first, last);
-        } else {
-            snprintf(spawn->npcName, 50, "%s", first);
-        }
+        // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
         
         spawn->currentCount = 0;
         spawn->respawnTimer = spawn->isUnique ? 0 : (120 + (rand() % 120));
@@ -131,7 +125,7 @@ void CreateCastleSpawnPoints(LocalMap* map)
     int maxY = map->height - safeMargin;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
@@ -156,13 +150,7 @@ void CreateCastleSpawnPoints(LocalMap* map)
         spawn->maxCount = 1 + (rand() % 3); // 1-3 NPCs per spawn
         
         // Generate name - ALWAYS use the name database
-        const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-        if (spawn->isUnique) {
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s %s", first, last);
-        } else {
-            snprintf(spawn->npcName, 50, "%s", first);
-        }
+        // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
         
         spawn->currentCount = 0;
         spawn->respawnTimer = spawn->isUnique ? 0 : (60 + (rand() % 120));
@@ -185,7 +173,7 @@ void CreateCaveSpawnPoints(LocalMap* map)
     int maxY = map->height - safeMargin;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
@@ -209,10 +197,8 @@ void CreateCaveSpawnPoints(LocalMap* map)
         
         spawn->isUnique = (i == 0 && rand() % 3 == 0); // First spawn might be unique boss
         if (spawn->isUnique) {
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            char tempName[50];
-            strcpy(tempName, spawn->npcName);
-            snprintf(spawn->npcName, 50, "%s the %s", first, tempName);
+            snprintf(spawn->npcTitle, sizeof(spawn->npcTitle), "%s", spawn->npcName);   // "Bat" becomes the title: "<name> the Bat"
+            spawn->npcName[0] = '\0';
         }
         
         spawn->currentCount = 0;
@@ -233,7 +219,7 @@ void CreateTowerSpawnPoints(LocalMap* map)
     int centerY = map->height / 2;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = centerX - 40 + (rand() % 80);
@@ -244,17 +230,14 @@ void CreateTowerSpawnPoints(LocalMap* map)
             // The wizard (unique)
             spawn->isUnique = true;
             spawn->npcType = NPC_WIZARD;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s %s", first, last);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 1;
             spawn->respawnTimer = 0;
         } else if (i < 4) {
             // Apprentices
             spawn->isUnique = false;
             spawn->npcType = NPC_VILLAGER;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 2 + (rand() % 3);
             spawn->respawnTimer = 180;
         } else {
@@ -285,7 +268,7 @@ void CreateDungeonSpawnPoints(LocalMap* map)
     int maxY = map->height - safeMargin;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
@@ -295,15 +278,13 @@ void CreateDungeonSpawnPoints(LocalMap* map)
         if (i == 0) { // Boss
             spawn->isUnique = true;
             spawn->npcType = NPC_BANDIT;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s the Dungeon Lord", first);
+            snprintf(spawn->npcTitle, sizeof(spawn->npcTitle), "Dungeon Lord");
             spawn->maxCount = 1;
             spawn->respawnTimer = 0;
         } else if (i < 5) { // Guards
             spawn->isUnique = false;
             spawn->npcType = NPC_GUARD;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 2 + (rand() % 4);
             spawn->respawnTimer = 120;
         } else if (i < 10) { // Undead
@@ -319,8 +300,7 @@ void CreateDungeonSpawnPoints(LocalMap* map)
         } else { // Prisoners
             spawn->isUnique = false;
             spawn->npcType = NPC_VILLAGER;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 2 + (rand() % 3);
             spawn->respawnTimer = 0;
         }
@@ -343,7 +323,7 @@ void CreateRuinsSpawnPoints(LocalMap* map)
     int maxY = map->height - safeMargin;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
@@ -353,31 +333,22 @@ void CreateRuinsSpawnPoints(LocalMap* map)
         int typeRoll = rand() % 100;
         if (typeRoll < 50) { // 50% Grave Robbers
             spawn->npcType = NPC_BANDIT;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 2 + (rand() % 5);
             spawn->respawnTimer = 150;
         } else if (typeRoll < 75) { // 25% Explorers
             spawn->npcType = NPC_WANDERER;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 1 + (rand() % 3);
             spawn->respawnTimer = 200;
         } else { // 25% Hermits
             spawn->npcType = NPC_VILLAGER;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 1 + (rand() % 2);
             spawn->respawnTimer = 250;
         }
         
         spawn->isUnique = (rand() % 10 < 2); // 20% unique
-        if (spawn->isUnique) {
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            char tempName[50];
-            strcpy(tempName, spawn->npcName);
-            snprintf(spawn->npcName, 50, "%s %s", tempName, last);
-        }
         
         spawn->currentCount = 0;
         spawn->respawnCounter = 0;
@@ -397,7 +368,7 @@ void CreateFortSpawnPoints(LocalMap* map)
     int maxY = map->height - safeMargin;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
@@ -416,13 +387,7 @@ void CreateFortSpawnPoints(LocalMap* map)
             spawn->isUnique = true;
         }
         
-        const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-        if (spawn->isUnique) {
-            const char* last = LAST_NAMES[rand() % LAST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s %s", first, last);
-        } else {
-            snprintf(spawn->npcName, 50, "%s", first);
-        }
+        // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
         
         spawn->maxCount = 2 + (rand() % 4);
         spawn->currentCount = 0;
@@ -444,7 +409,7 @@ void CreateBanditCampSpawnPoints(LocalMap* map)
     int maxY = map->height - safeMargin;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
@@ -454,14 +419,12 @@ void CreateBanditCampSpawnPoints(LocalMap* map)
         
         if (i == 0 && rand() % 2 == 0) {
             spawn->isUnique = true;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s the Bandit Leader", first);
+            snprintf(spawn->npcTitle, sizeof(spawn->npcTitle), "Bandit Leader");
             spawn->maxCount = 1;
             spawn->respawnTimer = 0;
         } else {
             spawn->isUnique = false;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 2 + (rand() % 4);
             spawn->respawnTimer = 120 + (rand() % 120);
         }
@@ -484,7 +447,7 @@ void CreateTravelerSpawnPoints(LocalMap* map)
     int maxY = map->height - safeMargin;
     
     for (int i = 0; i < map->spawnPointCount; i++) {
-        SpawnPoint* spawn = (SpawnPoint*)malloc(sizeof(SpawnPoint));
+        SpawnPoint* spawn = (SpawnPoint*)calloc(1, sizeof(SpawnPoint));
         memset(spawn, 0, sizeof(SpawnPoint));
         
         spawn->x = safeMargin + (rand() % (maxX - safeMargin));
@@ -493,13 +456,11 @@ void CreateTravelerSpawnPoints(LocalMap* map)
         
         if (rand() % 3 == 0) {
             spawn->npcType = NPC_BANDIT;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 1 + (rand() % 2);
         } else {
             spawn->npcType = NPC_WANDERER;
-            const char* first = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-            snprintf(spawn->npcName, 50, "%s", first);
+            // (no name here: the culture names this NPC when it is created, see CreateNPCFromSpawn)
             spawn->maxCount = 1;
         }
         
@@ -616,4 +577,4 @@ void NPCDied(NPC* npc)
         // Unique NPCs are gone forever
         npc->spawnPoint->maxCount = 0;
     }
-}
+}

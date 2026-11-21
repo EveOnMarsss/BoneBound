@@ -1,6 +1,65 @@
 {
   "id": "cat_kingdom",
   "species": "cat",
-  "settlement": { "starts": ["Kech", "Mew", "Sil"], "ends": ["ye", "haven", "claw"] },
-  "people":     { "starts": ["Whis", "Mis", "Tab"],  "ends": ["ker", "ty", "by"] }
+  "settlement": {
+    "starts": [
+      "Kech", "Mew", "Sil", "Purr", "Whisk", "Paw", "Fur", "Claw", "Tail", "Mitt",
+      "Vel", "Mar", "Tor", "Bel", "Dun", "Ash", "Bri", "Cob", "Dray", "Eld",
+      "Fen", "Gar", "Hal", "Ivy", "Jar", "Kel", "Lark", "Moss", "Nib", "Oak",
+      "Pip", "Quill", "Rook", "Sage", "Thorn", "Umber", "Vale", "Wren", "Zeph",
+      "Amber", "Bramble", "Cinder", "Dusk", "Ember", "Flint", "Glint", "Hazel", "Ink", "Jade",
+      "Kite", "Lumen", "Maple", "Nettle", "Opal", "Pebble", "Quartz", "Reed", "Sable", "Tansy",
+      "Ulla", "Vine", "Willow", "Xan", "Yew", "Zinn", "Birch", "Cedar", "Dune", "Elm",
+      "Fern", "Gorse", "Heath", "Iris", "Juniper", "Knot", "Linden", "Mallow", "Nook", "Orchid",
+      "Prim", "Quince", "Rush", "Sorrel", "Tumble", "Ursa", "Verbena", "Wisp", "Yarrow", "Zest",
+      "Bracken", "Clover", "Drift", "Echo", "Fable", "Glimmer", "Hollow", "Ivory", "Jasper", "Kindle"
+    ],
+    "ends": [
+      "ye", "haven", "claw", "paw", "tail", "whisker", "fur", "den", "nest", "roost",
+      "burrow", "hollow", "gate", "wall", "keep", "court", "hall", "hearth", "post", "mark",
+      "rest", "watch", "guard", "spire", "tower", "bridge", "ford", "moor", "field", "grove",
+      "wood", "glen", "dell", "vale", "ridge", "peak", "crag", "stone", "rock", "brook",
+      "stream", "pool", "pond", "lake", "bay", "shore", "coast", "isle", "land", "reach",
+      "run", "walk", "path", "way", "road", "lane", "step", "stride", "leap", "bound",
+      "spring", "fall", "rise", "crest", "crown", "cap", "top", "base", "root", "stem",
+      "branch", "leaf", "bloom", "petal", "seed", "pod", "husk", "bark", "moss", "fern",
+      "reed", "rush", "sedge", "grass", "thatch", "straw", "wool", "silk", "linen", "cloth",
+      "forge", "mill", "smith", "craft", "works", "shop", "stall", "market", "fair", "square"
+    ]
+  },
+  "people": {
+    "starts": [
+      "Whis", "Mis", "Tab", "Purr", "Fur", "Claw", "Paw", "Tail", "Vel", "Mar",
+      "Tor", "Bel", "Dun", "Ash", "Bri", "Cob", "Dray", "Eld", "Fen", "Gar",
+      "Hal", "Ivy", "Jar", "Kel", "Lark", "Moss", "Nib", "Oak", "Pip", "Quill",
+      "Rook", "Sage", "Thorn", "Umber", "Vale", "Wren", "Zeph", "Amber", "Bramble",
+      "Cinder", "Dusk", "Ember", "Flint", "Glint", "Hazel", "Ink", "Jade", "Kite", "Lumen",
+      "Maple", "Nettle", "Opal", "Pebble", "Quartz", "Reed", "Sable", "Tansy", "Ulla", "Vine",
+      "Willow", "Xan", "Yew", "Zinn", "Birch", "Cedar", "Dune", "Elm", "Fern", "Gorse",
+      "Heath", "Iris", "Juniper", "Knot", "Linden", "Mallow", "Nook", "Orchid", "Prim", "Quince",
+      "Rush", "Sorrel", "Tumble", "Ursa", "Verbena", "Wisp", "Zest", "Bracken", "Clover", "Drift",
+      "Echo", "Fable", "Glimmer", "Hollow", "Ivory", "Jasper", "Kindle", "Lilt", "Murmur", "Nim"
+    ],
+    "ends": [
+      "ker", "ty", "by", "paw", "tail", "whisker", "fur", "ear", "eye", "nose",
+      "tooth", "claw", "foot", "step", "leap", "bound", "spring", "pounce", "purr", "mew",
+      "hiss", "yowl", "call", "song", "tune", "note", "chime", "ring", "bell", "whisper",
+      "murmur", "echo", "voice", "word", "name", "mark", "sign", "seal", "crest", "crown",
+      "heart", "soul", "spirit", "shade", "shadow", "light", "glow", "spark", "flame", "ember",
+      "ash", "smoke", "mist", "fog", "dew", "rain", "snow", "frost", "ice", "wind",
+      "storm", "cloud", "sky", "star", "moon", "sun", "dawn", "dusk", "night", "day",
+      "stone", "rock", "gem", "jewel", "gold", "silver", "copper", "iron", "steel", "bronze",
+      "wood", "leaf", "thorn", "briar", "rose", "lily", "fern", "moss", "reed", "vine",
+      "brook", "stream", "pool", "wave", "tide", "shore", "sand", "dust", "earth", "root",
+      "ker", "ty", "by", "la", "ro", "ra", "li", "lo", "ni", "no",
+      "ka", "ko", "ki", "ta", "to", "ti", "da", "do", "di", "ba",
+      "bo", "bi", "pa", "po", "pi", "ma", "mo", "mi", "na", "ne",
+      "sa", "so", "si", "va", "vo", "vi", "za", "zo", "zi", "fa",
+      "fo", "fi", "ga", "go", "gi", "ha", "ho", "hi", "ja", "jo",
+      "ji", "wa", "we", "wo", "ya", "yo", "ye", "lya", "rya", "nya",
+      "sha", "sho", "she", "tha", "tho", "the", "dra", "dro", "kle", "ske",
+      "el", "en", "on", "ar", "er", "in", "un", "as", "es", "is",
+      "ix", "ox", "ek", "ik", "ok", "uk", "am", "em", "im", "om"
+    ]
+  }
 }

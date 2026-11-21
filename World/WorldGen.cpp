@@ -1,6 +1,7 @@
 #include "WorldGen.h"
 #include "FastNoiseLite.h"
 #include "LocationNames.h"
+#include "NameGen.h"
 #include "WorldRng.h"
 
 #include <vector>
@@ -720,13 +721,24 @@ struct Generator {
             else if (nearRiver[i]) fl = NAME_RIVER;
             else if (biome[i] == BIOME_HILLS || nearMtn[i]) fl = NAME_HILL;
             else if (biome[i] == BIOME_FOREST || biome[i] == BIOME_JUNGLE || biome[i] == BIOME_TAIGA) fl = NAME_FOREST;
+            // Villages are named in the style of the culture that owns the tile (if any data is loaded).
+            const Culture* culture = (sites[s].type == LOCATION_VILLAGE) ? CultureForTile(sites[s].x, sites[s].y, W) : nullptr;
+
             char name[50];
             for (int attempt = 0; attempt < 12; attempt++) {
-                GenerateLocationName(name, sizeof(name), sites[s].type, fl, rng);
+                if (culture != nullptr) {
+                    std::string made = MakeName(*culture, false, rng);     // false = a place name, not a person
+                    snprintf(name, sizeof(name), "%s", made.c_str());
+                } else {
+                    GenerateLocationName(name, sizeof(name), sites[s].type, fl, rng);   // the old name lists
+                }
                 if (!used.count(name)) break;
             }
-            if (used.count(name)) {   // exhausted unique combos: add a numeral
-                char tmp[50]; snprintf(tmp, sizeof(tmp), "%s II", name); snprintf(name, sizeof(name), "%s", tmp);
+            if (used.count(name)) {   // out of fresh combinations: add a number until the name is unique
+                std::string base = name;
+                for (int number = 2; used.count(name); number++) {
+                    snprintf(name, sizeof(name), "%s %d", base.c_str(), number);   // "Grrton 2", "Grrton 3", ...
+                }
             }
             used.insert(name);
             snprintf(t->locationName, sizeof(t->locationName), "%s", name);

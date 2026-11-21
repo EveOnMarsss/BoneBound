@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include "Systems/Logger.h"
 // ===== GAME CONSTANTS =====
-#define GAME_VERSION "0.0.8"
+#define GAME_VERSION "0.0.9"
 #define TILE_SIZE 24            // 2x the 12px tileset glyphs (crisp pixels)
 #define TILESET_CELL 12
 #define LOCAL_MAP_WIDTH 256
@@ -137,7 +137,8 @@ struct SpawnPoint {
     int x, y;
     SpawnType type;
     NPCType npcType;
-    char npcName[50];
+    char npcName[50];     // a FIXED name from the spawn point (creatures like "Bat"); empty = the culture names the NPC
+    char npcTitle[40];     // optional title, like "Dungeon Lord": the NPC becomes "<culture name> the Dungeon Lord"
     bool isUnique;
     int respawnTimer;
     int maxCount;
@@ -273,9 +274,5 @@ extern bool isInConversation;
 extern int conversationChoice;
 
 // ===== NAME DATABASE DECLARATIONS =====
-extern const char* FIRST_NAMES[];
-extern const char* LAST_NAMES[];
-extern const int FIRST_NAME_COUNT;
-extern const int LAST_NAME_COUNT;
 
 #endif

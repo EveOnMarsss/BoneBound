@@ -1,7 +1,66 @@
-
 {
   "id": "dog_kingdom",
   "species": "dog",
-  "settlement": { "starts": ["Bark", "Woof", "Grr"], "ends": ["ton", "ville", "bury"] },
-  "people":     { "starts": ["Ruff", "Snuf", "Wag"], "ends": ["ins", "o", "y"] }
+  "settlement": {
+    "starts": [
+      "Bark", "Woof", "Grr", "Howl", "Bay", "Yip", "Yap", "Snarl", "Growl", "Whine",
+      "Paw", "Tail", "Fur", "Snout", "Muzzle", "Ear", "Fang", "Claw", "Hound", "Wolf",
+      "Vel", "Mar", "Tor", "Bel", "Dun", "Ash", "Bri", "Cob", "Dray", "Eld",
+      "Fen", "Gar", "Hal", "Ivy", "Jar", "Kel", "Lark", "Moss", "Nib", "Oak",
+      "Pip", "Quill", "Rook", "Sage", "Thorn", "Umber", "Vale", "Wren", "Yarrow", "Zeph",
+      "Amber", "Bramble", "Cinder", "Dusk", "Ember", "Flint", "Glint", "Hazel", "Ink", "Jade",
+      "Kite", "Lumen", "Maple", "Nettle", "Opal", "Pebble", "Quartz", "Reed", "Sable", "Tansy",
+      "Ulla", "Vine", "Willow", "Xan", "Yew", "Zinn", "Birch", "Cedar", "Dune", "Elm",
+      "Fern", "Gorse", "Heath", "Iris", "Juniper", "Knot", "Linden", "Mallow", "Nook", "Orchid",
+      "Prim", "Quince", "Rush", "Sorrel", "Tumble", "Ursa", "Verbena", "Wisp", "Zest", "Bracken"
+    ],
+    "ends": [
+      "ton", "ville", "bury", "field", "ford", "wood", "dale", "moor", "stead", "holm",
+      "wick", "worth", "ham", "shire", "gate", "bridge", "brook", "pool", "mere", "lake",
+      "hill", "ridge", "peak", "crag", "stone", "rock", "den", "kennel", "run", "yard",
+      "pound", "pen", "fold", "mead", "meadow", "grove", "glen", "dell", "vale", "marsh",
+      "fen", "bog", "heath", "down", "cliff", "shore", "coast", "bay", "isle", "land",
+      "reach", "rest", "watch", "guard", "keep", "fort", "camp", "post", "mark", "stead",
+      "hall", "court", "hearth", "home", "house", "lodge", "cabin", "hut", "roost", "nest",
+      "burrow", "hollow", "cave", "grotto", "spring", "well", "fall", "rise", "crest", "crown",
+      "top", "base", "root", "branch", "leaf", "bloom", "seed", "bark", "moss", "fern",
+      "reed", "rush", "grass", "thatch", "straw", "wool", "silk", "forge", "mill", "works"
+    ]
+  },
+  "people": {
+    "starts": [
+      "Ruff", "Snuf", "Wag", "Bark", "Woof", "Howl", "Bay", "Yip", "Growl", "Whine",
+      "Paw", "Tail", "Fur", "Snout", "Fang", "Claw", "Hound", "Wolf", "Vel", "Mar",
+      "Tor", "Bel", "Dun", "Ash", "Bri", "Cob", "Dray", "Eld", "Fen", "Gar",
+      "Hal", "Ivy", "Jar", "Kel", "Lark", "Moss", "Nib", "Oak", "Pip", "Quill",
+      "Rook", "Sage", "Thorn", "Umber", "Vale", "Wren", "Yarrow", "Zeph", "Amber", "Bramble",
+      "Cinder", "Dusk", "Ember", "Flint", "Glint", "Hazel", "Ink", "Jade", "Kite", "Lumen",
+      "Maple", "Nettle", "Opal", "Pebble", "Quartz", "Reed", "Sable", "Tansy", "Ulla", "Vine",
+      "Willow", "Xan", "Yew", "Zinn", "Birch", "Cedar", "Dune", "Elm", "Fern", "Gorse",
+      "Heath", "Iris", "Juniper", "Knot", "Linden", "Mallow", "Nook", "Orchid", "Prim", "Quince",
+      "Rush", "Sorrel", "Tumble", "Ursa", "Verbena", "Wisp", "Zest", "Bracken", "Clover", "Drift"
+    ],
+    "ends": [
+      "ins", "o", "y", "er", "el", "en", "on", "ar", "us", "ax",
+      "ix", "ox", "ek", "ik", "ok", "uk", "am", "em", "im", "om",
+      "um", "an", "in", "un", "as", "es", "is", "os", "us", "ys",
+      "paw", "tail", "fur", "ear", "fang", "claw", "snout", "bark", "howl", "bay",
+      "yip", "growl", "whine", "purr", "snarl", "huff", "puff", "woof", "ruff", "snuf",
+      "wag", "trot", "leap", "bound", "spring", "pounce", "run", "dash", "chase", "fetch",
+      "guard", "watch", "seek", "track", "sniff", "scout", "herd", "lead", "pack", "pup",
+      "hound", "wolf", "mastiff", "terrier", "shepherd", "retriever", "spaniel", "beagle", "collie", "poodle",
+      "stone", "rock", "gem", "gold", "silver", "iron", "steel", "wood", "leaf", "thorn",
+      "rose", "fern", "moss", "reed", "brook", "stream", "pool", "wave", "tide", "shore",
+      "ins", "o", "y", "er", "el", "en", "on", "ar", "us", "ax",
+      "ix", "ox", "ek", "ik", "ok", "uk", "am", "em", "im", "om",
+      "um", "an", "in", "un", "as", "es", "is", "os", "ys", "al",
+      "ker", "ty", "by", "la", "ro", "ra", "li", "lo", "ni", "no",
+      "ka", "ko", "ki", "ta", "to", "ti", "da", "do", "di", "ba",
+      "bo", "bi", "pa", "po", "pi", "ma", "mo", "mi", "na", "ne",
+      "sa", "so", "si", "va", "vo", "vi", "za", "zo", "zi", "fa",
+      "fo", "fi", "ga", "go", "gi", "ha", "ho", "hi", "ja", "jo",
+      "ji", "wa", "we", "wo", "ya", "yo", "ye", "lya", "rya", "nya",
+      "sha", "sho", "she", "tha", "tho", "the", "dra", "dro", "kle", "ske"
+    ]
+  }
 }

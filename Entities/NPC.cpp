@@ -1,4 +1,5 @@
 #include "NPC.h"
+#include "../World/NameGen.h"
 #include "../Render/Tileset.h"
 #include "SpawnPoint.h"
 #include "../World/LocalMap.h"
@@ -6,103 +7,7 @@
 #include "../UI/Conversation.h"
 #include <time.h>
 
-// ===== NAME DATABASE DEFINITIONS =====
-const char* FIRST_NAMES[] = {
-    // Male
-    "John", "William", "James", "Robert", "Michael", "Thomas", "Richard", "Charles",
-    "Henry", "Edward", "George", "Andrew", "David", "Daniel", "Matthew", "Christopher",
-    "Anthony", "Donald", "Mark", "Paul", "Steven", "Kenneth", "Joshua", "Kevin",
-    "Brian", "Timothy", "Ronald", "Jason", "Jeffrey", "Ryan", "Jacob", "Gary",
-    "Nicholas", "Eric", "Stephen", "Jonathan", "Larry", "Justin", "Scott", "Brandon",
-    "Benjamin", "Samuel", "Gregory", "Frank", "Alexander", "Raymond", "Patrick", "Jack",
-    "Dennis", "Jerry", "Tyler", "Aaron", "Jose", "Adam", "Nathan", "Peter", "Zachary",
-    "Walter", "Harold", "Douglas", "Carl", "Arthur", "Roger", "Keith", "Gerald",
-    "Lawrence", "Terry", "Sean", "Austin", "Christian", "Jesse", "Ethan", "Billy",
-    "Bruce", "Ralph", "Roy", "Jordan", "Bryan", "Alan", "Wayne", "Eugene", "Logan",
-    "Randy", "Louis", "Russell", "Vincent", "Philip", "Bobby", "Johnny", "Bradley",
-    
-    // Female
-    "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica",
-    "Sarah", "Karen", "Nancy", "Lisa", "Betty", "Margaret", "Sandra", "Ashley",
-    "Kimberly", "Emily", "Donna", "Michelle", "Dorothy", "Carol", "Amanda", "Melissa",
-    "Deborah", "Stephanie", "Rebecca", "Sharon", "Laura", "Cynthia", "Kathleen", "Amy",
-    "Shirley", "Angela", "Helen", "Anna", "Brenda", "Pamela", "Nicole", "Samantha",
-    "Katherine", "Emma", "Ruth", "Christine", "Catherine", "Debra", "Rachel", "Carolyn",
-    "Janet", "Virginia", "Maria", "Heather", "Diane", "Julie", "Joyce", "Victoria",
-    "Kelly", "Christina", "Lauren", "Joan", "Evelyn", "Olivia", "Judith", "Megan",
-    "Cheryl", "Martha", "Andrea", "Frances", "Hannah", "Jacqueline", "Ann", "Gloria",
-    "Jean", "Kathryn", "Alice", "Teresa", "Sara", "Janice", "Doris", "Madison",
-    "Julia", "Grace", "Judy", "Abigail", "Marie", "Denise", "Beverly", "Amber",
-    
-    // Fantasy/Medieval
-    "Aric", "Brom", "Cedric", "Dorian", "Eldric", "Finnian", "Gareth", "Hadrian",
-    "Ivor", "Jorah", "Kaelen", "Leofric", "Merek", "Nolan", "Orin", "Percival",
-    "Quinn", "Roland", "Sylas", "Theron", "Urien", "Valen", "Warrick", "Xander",
-    "Yorick", "Zane", "Aelwen", "Briar", "Caelia", "Dwyn", "Elara", "Faelan",
-    "Gwyneth", "Hestia", "Isolde", "Juniper", "Kaelia", "Lirien", "Morwen", "Nimue",
-    "Oriana", "Phaedra", "Quenlya", "Rhiannon", "Seraphina", "Talia", "Una", "Vivienne",
-    "Wynne", "Xanthe", "Ysmay", "Zephyra"
-};
-
-const char* LAST_NAMES[] = {
-    // Common
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-    "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
-    "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson",
-    "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker",
-    "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores",
-    "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
-    "Carter", "Roberts", "Gomez", "Phillips", "Evans", "Turner", "Diaz", "Parker",
-    "Cruz", "Edwards", "Collins", "Reyes", "Stewart", "Morris", "Morales", "Murphy",
-    "Cook", "Rogers", "Gutierrez", "Ortiz", "Morgan", "Cooper", "Peterson", "Bailey",
-    "Reed", "Kelly", "Howard", "Ramos", "Kim", "Cox", "Ward", "Richardson", "Watson",
-    "Brooks", "Chavez", "Wood", "James", "Bennett", "Gray", "Mendoza", "Ruiz",
-    "Hughes", "Price", "Alvarez", "Castillo", "Sanders", "Patel", "Myers", "Long",
-    
-    // Medieval/Occupation
-    "Baker", "Butcher", "Carpenter", "Cooper", "Fletcher", "Gardner", "Hunter",
-    "Mason", "Miller", "Miner", "Potter", "Sawyer", "Shepherd", "Smith", "Taylor",
-    "Thatcher", "Weaver", "Wright", "Archer", "Bowman", "Carter", "Chandler",
-    "Clark", "Cook", "Fisher", "Forester", "Fuller", "Glover", "Harper", "Hawkins",
-    "Hayward", "Head", "Herd", "Hunt", "Kemp", "Knight", "Marshall", "Page",
-    "Parker", "Parson", "Porter", "Reeve", "Saddler", "Sargeant", "Sexton",
-    "Sherman", "Spencer", "Steward", "Stoddard", "Summers", "Ward", "Webb",
-    
-    // Location-based
-    "Hill", "Lake", "Wood", "Forest", "Field", "Marsh", "Moore", "Brooks",
-    "Rivers", "Stone", "Bridge", "Ford", "Haven", "Shore", "Creek", "Valley",
-    "Meadows", "Grove", "Thorne", "Wells", "Springs", "Underwood", "Atwood",
-    "Blackwood", "Greenwood", "Holbrook", "Linwood", "Oakley", "Prescott",
-    "Radcliff", "Redmond", "Sherwood", "Stanley", "Sutton", "Thornton",
-    "Wesley", "Weston", "Whitman", "Woodward", "Worth",
-    
-    // Fantasy
-    "Ironheart", "Stormborn", "Winterfell", "Blackthorn", "Silverwood", "Goldmane",
-    "Oakenshield", "Moonshadow", "Dragonborn", "Starweaver", "Frostbeard",
-    "Lightfoot", "Darkwater", "Swiftarrow", "Strongbow", "Fairwind", "Ravenclaw",
-    "Griffin", "Phoenix", "Stormcrow", "Whitewolf", "Redhand", "Graywolf",
-    "Blackraven", "Silverstream", "Goldenleaf", "Copperfield", "Ironwood",
-    "Steelheart", "Bronzebeard", "Silverblade", "Goldfinder", "Stonehelm",
-    "Ironfist", "Strongarm", "Swiftwind", "Farsight", "Dawnbringer"
-};
-
-const int FIRST_NAME_COUNT = sizeof(FIRST_NAMES) / sizeof(FIRST_NAMES[0]);
-const int LAST_NAME_COUNT = sizeof(LAST_NAMES) / sizeof(LAST_NAMES[0]);
-
-// Generate a random name for NPCs
-void GenerateNPCName(char* buffer, int bufferSize, bool isUnique)
-{
-    if (isUnique) {
-        // Unique NPCs get a first and last name
-        const char* firstName = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-        const char* lastName = LAST_NAMES[rand() % LAST_NAME_COUNT];
-        snprintf(buffer, bufferSize, "%s %s", firstName, lastName);
-    } else {
-        // Generic NPCs just get a first name
-        const char* firstName = FIRST_NAMES[rand() % FIRST_NAME_COUNT];
-        snprintf(buffer, bufferSize, "%s", firstName);
-    }
-}
+// NPC names now come from the culture data files (data/base/cultures), see World/NameGen.cpp.
 
 // Get color based on NPC role
 Color GetRoleColor(NPCType type)
@@ -230,7 +135,17 @@ NPC* CreateNPCFromSpawn(SpawnPoint* spawn, int worldX, int worldY)
     if (npc->localY > LOCAL_MAP_HEIGHT - 2) npc->localY = LOCAL_MAP_HEIGHT - 2;
     
     // Set race (random for now, but you can make this deterministic based on NPC type or location)
-    npc->isCat = (rand() % 2 == 0);
+    // Which culture owns this place? (nullptr when no data is loaded)
+    const Culture* culture = CultureForTile(worldX, worldY, currentMapWidth);
+
+    // The species follows the culture; with no culture (or a species we have no glyph for yet) it stays random.
+    if (culture != NULL && culture->species == "cat") {
+        npc->isCat = true;
+    } else if (culture != NULL && culture->species == "dog") {
+        npc->isCat = false;
+    } else {
+        npc->isCat = (rand() % 2 == 0);
+    }
     npc->isDog = !npc->isCat;
     
     // Set display character based on race (C for Cat, D for Dog)
@@ -239,11 +154,22 @@ NPC* CreateNPCFromSpawn(SpawnPoint* spawn, int worldX, int worldY)
     // Set color based on role
     npc->color = GetRoleColor(npc->type);
     
-    // Use spawn name if provided, otherwise generate one
+    // ----- the NPC's name -----
     if (spawn->npcName[0] != '\0') {
-        strcpy(npc->name, spawn->npcName);
+        // a FIXED name from the spawn point, used for creatures such as "Bat" or "Skeleton"
+        snprintf(npc->name, sizeof(npc->name), "%s", spawn->npcName);
+    } else if (culture != NULL) {
+        Rng nameRng((uint64_t)rand());                                // a fresh generator, seeded from rand()
+        std::string fullName = MakeName(*culture, true, nameRng);     // true = a person's name
+        if (spawn->npcTitle[0] != '\0') {
+            fullName += std::string(" the ") + spawn->npcTitle;       // "Wagins the Dungeon Lord"
+        } else if (spawn->isUnique) {
+            fullName += " " + MakeName(*culture, true, nameRng);      // unique NPCs also get a family name
+        }
+        snprintf(npc->name, sizeof(npc->name), "%s", fullName.c_str());
     } else {
-        GenerateNPCName(npc->name, 50, spawn->isUnique);
+        // No culture data loaded at all (the data/ folder is missing): a plain placeholder, no hardcoded name list.
+        snprintf(npc->name, sizeof(npc->name), "%s", spawn->npcTitle[0] != '\0' ? spawn->npcTitle : "Stranger");
     }
     
     // Add title for unique NPCs if desired (optional - comment out if you don't want titles)

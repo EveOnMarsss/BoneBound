@@ -17,6 +17,10 @@ int main()
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "BoneBound");
     LOG("Window initialized\n");
     LoadGameData(gameData);
+    for (const std::string& message : gameData.messages)
+    {
+        LOG("%s\n", message.c_str());
+    }
     // FIX: raylib quits on ESC by default, which closed the game when cancelling a name edit or
     // leaving a conversation. ESC now belongs to the game (pause menu); quit from the menus instead.
     SetExitKey(KEY_NULL);
